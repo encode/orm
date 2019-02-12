@@ -1,0 +1,10 @@
+databases
+
+# Testing
+autoflake
+black
+codecov
+isort
+mypy
+pytest
+pytest-cov

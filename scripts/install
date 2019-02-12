@@ -1,0 +1,9 @@
+#!/bin/sh -e
+
+[[ $1 = "-p" ]] && PYTHON=$2 || PYTHON="python3"
+
+set -x
+
+"$PYTHON" -m venv venv
+venv/bin/pip install -U -r requirements.txt
+venv/bin/pip install -e .
