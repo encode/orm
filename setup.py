@@ -8,7 +8,7 @@ from setuptools import setup
 
 
 PACKAGE = "orm"
-URL = "https://github.com/encode/databases"
+URL = "https://github.com/encode/orm"
 
 def get_version(package):
     """

@@ -1,4 +1,4 @@
-databases
+databases[sqlite]
 
 # Testing
 autoflake
