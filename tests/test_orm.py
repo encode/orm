@@ -3,7 +3,7 @@ import databases
 import functools
 import pytest
 import sqlalchemy
-from orm.core import Model
+from orm.core import Model, NoMatch, MultipleMatches
 
 
 DATABASE_URL = "sqlite:///test.db"
@@ -56,8 +56,23 @@ def async_adapter(wrapped_func):
 @async_adapter
 async def test_queries():
     async with database:
-        note = await Notes.create(id=None, text="example", completed=False)
+        await Notes.create(text="example1", completed=False)
+        await Notes.create(text="example2", completed=True)
+        await Notes.create(text="example3", completed=False)
+
         notes = await Notes.query().all()
-        assert len(notes) == 1
-        assert note[0].text == "example"
-        await note.update(text="foo")
+        assert len(notes) == 3
+        assert notes[0].text == "example1"
+        assert notes[0].completed is False
+
+        await notes[0].update(text="updated")
+
+        note = await Notes.query(id=notes[0].id).get()
+        assert note.text == "updated"
+        assert note.completed is False
+
+        with pytest.raises(NoMatch):
+            await Notes.query(text="nope").get()
+
+        with pytest.raises(MultipleMatches):
+            await Notes.query(completed=False).get()
