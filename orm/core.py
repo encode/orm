@@ -57,7 +57,7 @@ class Model:
     @classmethod
     async def create(cls, **kwargs):
         query = cls.table.insert().values(**kwargs)
-        kwargs['id'] = await cls.database.execute(query)
+        kwargs[list(cls.table.primary_key)[0].name] = await cls.database.execute(query)
         return cls(**kwargs)
 
     async def update(self, **kwargs):
