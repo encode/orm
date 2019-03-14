@@ -16,7 +16,7 @@ class Query:
         self.cls = cls
         self.query = self.table.select()
 
-    def filter(self, **kwargs) -> 'Query':
+    def filter(self, **kwargs) -> "Query":
         if not kwargs:
             return self
 
@@ -49,6 +49,7 @@ class Query:
 
         return result
 
+
 class Model:
     @classmethod
     def query(cls, **kwargs):
@@ -61,5 +62,5 @@ class Model:
         return cls(**kwargs)
 
     async def update(self, **kwargs):
-        query = self.table.update().values(**kwargs).where(self.table.c.id==self.id)
+        query = self.table.update().values(**kwargs).where(self.table.c.id == self.id)
         await self.database.execute(query)
