@@ -10,6 +10,6 @@ fi
 set -x
 
 PYTHONPATH=. ${PREFIX}pytest --ignore venv --cov=${PACKAGE} --cov=tests --cov-fail-under=100 --cov-report=term-missing ${@}
-${PREFIX}mypy ${PACKAGE} --ignore-missing-imports --disallow-untyped-defs
+#${PREFIX}mypy ${PACKAGE} --ignore-missing-imports --disallow-untyped-defs
 ${PREFIX}autoflake --recursive ${PACKAGE} tests
 ${PREFIX}black ${PACKAGE} tests --check
