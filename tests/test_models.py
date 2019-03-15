@@ -119,7 +119,13 @@ async def test_model_filter():
     await Product.objects.create(name="Dress", rating=4)
     await Product.objects.create(name="Coat", rating=3)
 
-    product = await Product.objects.get(name="T-Shirt", rating=5)
+    product = await Product.objects.get(name__iexact="t-shirt", rating=5)
     assert product.pk is not None
     assert product.name == "T-Shirt"
     assert product.rating == 5
+
+    products = await Product.objects.all(rating__gte=4)
+    assert len(products) == 2
+
+    products = await Product.objects.all(name__icontains='T')
+    assert len(products) == 2

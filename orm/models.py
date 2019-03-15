@@ -63,7 +63,28 @@ class QuerySet:
     def filter(self, **kwargs):
         filter_clauses = self.filter_clauses
         for key, value in kwargs.items():
-            clause = self.table.columns[key] == value
+            if '__' in key:
+                key, op = key.split("__")
+            else:
+                op = 'exact'
+
+            op_attr = {
+                'exact': '__eq__',
+                'iexact': 'ilike',
+                'contains': 'like',
+                'icontains': 'ilike',
+                'in': 'in_',
+                'gt': '__gt__',
+                'gte': '__ge__',
+                'lt': '__lt__',
+                'lte': '__le__',
+            }[op]
+
+            if op in ['contains', 'icontains']:
+                value = '%' + value + '%'
+
+            column = self.table.columns[key]
+            clause = getattr(column, op_attr)(value)
             filter_clauses.append(clause)
 
         return self.__class__(
@@ -71,7 +92,10 @@ class QuerySet:
             filter_clauses=filter_clauses
         )
 
-    async def all(self):
+    async def all(self, **kwargs):
+        if kwargs:
+            return await self.filter(**kwargs).all()
+
         expr = self.build_select_expression()
         rows = await self.database.fetch_all(expr)
         return [self.model_cls(dict(row)) for row in rows]
