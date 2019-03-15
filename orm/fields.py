@@ -41,21 +41,11 @@ class String(ModelField, typesystem.String):
         return sqlalchemy.String(length=self.max_length)
 
 
-# class Text(ModelField, typesystem.Text):
-#     def get_column_type(self):
-#         return sqlalchemy.Text()
-
-
 class Integer(ModelField, typesystem.Integer):
     def get_column_type(self):
         return sqlalchemy.Integer()
 
 
-# class Float(ModelField, typesystem.Float):
-#     def get_column_type(self):
-#         return sqlalchemy.Float()
-#
-#
-# class Boolean(ModelField, typesystem.Boolean):
-#     def get_column_type(self):
-#         return sqlalchemy.Integer()
+class Boolean(ModelField, typesystem.Boolean):
+    def get_column_type(self):
+        return sqlalchemy.Boolean()

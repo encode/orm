@@ -68,6 +68,8 @@ class QuerySet:
             else:
                 op = 'exact'
 
+            # Map the operation code onto SQLAlchemy's ColumnElement
+            # https://docs.sqlalchemy.org/en/latest/core/sqlelement.html#sqlalchemy.sql.expression.ColumnElement
             op_attr = {
                 'exact': '__eq__',
                 'iexact': 'ilike',
@@ -104,7 +106,7 @@ class QuerySet:
         if kwargs:
             return await self.filter(**kwargs).get()
 
-        expr = self.build_select_expression()
+        expr = self.build_select_expression().limit(2)
         rows = await self.database.fetch_all(expr)
 
         if not rows:

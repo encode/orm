@@ -31,6 +31,7 @@ class Product(orm.Model):
     id = orm.Integer(primary_key=True)
     name = orm.String(max_length=100)
     rating = orm.Integer(minimum=1, maximum=5)
+    in_stock = orm.Boolean(default=False)
 
 
 @pytest.fixture(autouse=True, scope="module")
@@ -115,16 +116,16 @@ async def test_model_filter():
     with pytest.raises(orm.NoMatch):
         await User.objects.get(name="Jim")
 
-    await Product.objects.create(name="T-Shirt", rating=5)
+    await Product.objects.create(name="T-Shirt", rating=5, in_stock=True)
     await Product.objects.create(name="Dress", rating=4)
-    await Product.objects.create(name="Coat", rating=3)
+    await Product.objects.create(name="Coat", rating=3, in_stock=True)
 
     product = await Product.objects.get(name__iexact="t-shirt", rating=5)
     assert product.pk is not None
     assert product.name == "T-Shirt"
     assert product.rating == 5
 
-    products = await Product.objects.all(rating__gte=4)
+    products = await Product.objects.all(rating__gte=2, in_stock=True)
     assert len(products) == 2
 
     products = await Product.objects.all(name__icontains='T')
