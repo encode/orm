@@ -1,13 +1,11 @@
 import asyncio
 import functools
-import pytest
 
 import databases
 import pytest
 import sqlalchemy
 
 import orm
-
 
 DATABASE_URL = "sqlite:///test.db"
 database = databases.Database(DATABASE_URL, force_rollback=True)
@@ -128,5 +126,5 @@ async def test_model_filter():
     products = await Product.objects.all(rating__gte=2, in_stock=True)
     assert len(products) == 2
 
-    products = await Product.objects.all(name__icontains='T')
+    products = await Product.objects.all(name__icontains="T")
     assert len(products) == 2
