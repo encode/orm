@@ -2,6 +2,7 @@ import typing
 
 import sqlalchemy
 import typesystem
+
 from typesystem.schemas import SchemaMetaclass
 from orm.exceptions import NoMatch, MultipleMatches
 
@@ -34,8 +35,9 @@ class ModelMetaclass(SchemaMetaclass):
 
 
 class QuerySet:
-    def __init__(self, model_cls=None):
+    def __init__(self, model_cls=None, filter_clauses=None):
         self.model_cls = model_cls
+        self.filter_clauses = [] if filter_clauses is None else filter_clauses
 
     def __get__(self, instance, owner):
         return self.__class__(model_cls=owner)
@@ -48,13 +50,37 @@ class QuerySet:
     def table(self):
         return self.model_cls.__table__
 
-    async def all(self):
+    def build_select_expression(self):
         expr = self.table.select()
+        if self.filter_clauses:
+            if len(self.filter_clauses) == 1:
+                clause = self.filter_clauses[0]
+            else:
+                clause = sqlalchemy.sql.and_(*self.filter_clauses)
+            expr = expr.where(clause)
+        return expr
+
+    def filter(self, **kwargs):
+        filter_clauses = self.filter_clauses
+        for key, value in kwargs.items():
+            clause = self.table.columns[key] == value
+            filter_clauses.append(clause)
+
+        return self.__class__(
+            model_cls=self.model_cls,
+            filter_clauses=filter_clauses
+        )
+
+    async def all(self):
+        expr = self.build_select_expression()
         rows = await self.database.fetch_all(expr)
         return [self.model_cls(dict(row)) for row in rows]
 
-    async def get(self):
-        expr = self.table.select()
+    async def get(self, **kwargs):
+        if kwargs:
+            return await self.filter(**kwargs).get()
+
+        expr = self.build_select_expression()
         rows = await self.database.fetch_all(expr)
 
         if not rows:
@@ -85,6 +111,16 @@ class QuerySet:
 class Model(typesystem.Schema, metaclass=ModelMetaclass):
     __abstract__ = True
 
+    objects = QuerySet()
+
+    @property
+    def pk(self):
+        return getattr(self, self.__pkname__)
+
+    @pk.setter
+    def pk(self, value):
+        setattr(self, self.__pkname__, value)
+
     async def update(self, **kwargs):
         # Validate the keyword arguments.
         fields = {key: field for key, field in self.fields.items() if key in kwargs}
@@ -110,13 +146,3 @@ class Model(typesystem.Schema, metaclass=ModelMetaclass):
 
         # Perform the delete.
         await self.__database__.execute(expr)
-
-    objects = QuerySet()
-
-    @property
-    def pk(self):
-        return getattr(self, self.__pkname__)
-
-    @pk.setter
-    def pk(self, value):
-        setattr(self, self.__pkname__, value)

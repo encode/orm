@@ -23,6 +23,16 @@ class User(orm.Model):
     name = orm.String(max_length=100)
 
 
+class Product(orm.Model):
+    __tablename__ = "product"
+    __metadata__ = metadata
+    __database__ = database
+
+    id = orm.Integer(primary_key=True)
+    name = orm.String(max_length=100)
+    rating = orm.Integer(minimum=1, maximum=5)
+
+
 @pytest.fixture(autouse=True, scope="module")
 def create_test_database():
     engine = sqlalchemy.create_engine(DATABASE_URL)
@@ -91,3 +101,25 @@ async def test_model_get():
     user = await User.objects.create(name="Jane")
     with pytest.raises(orm.MultipleMatches):
         await User.objects.get()
+
+
+@async_adapter
+async def test_model_filter():
+    await User.objects.create(name="Tom")
+    await User.objects.create(name="Jane")
+    await User.objects.create(name="Lucy")
+
+    user = await User.objects.get(name="Lucy")
+    assert user.name == "Lucy"
+
+    with pytest.raises(orm.NoMatch):
+        await User.objects.get(name="Jim")
+
+    await Product.objects.create(name="T-Shirt", rating=5)
+    await Product.objects.create(name="Dress", rating=4)
+    await Product.objects.create(name="Coat", rating=3)
+
+    product = await Product.objects.get(name="T-Shirt", rating=5)
+    assert product.pk is not None
+    assert product.name == "T-Shirt"
+    assert product.rating == 5
