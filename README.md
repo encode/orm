@@ -3,7 +3,7 @@
 **IN PROGRESS**
 
 *Seriously, it's in progress - we don't even have foreign key support in here
-yet. But it's already looking quite nice.*
+yet. But it's a nice start.*
 
 **Note**: Use `ipython` to try this from the console, since it supports `await`.
 
