@@ -1,8 +1,7 @@
-databases
+databases[sqlite]
 typesystem
 
 # Testing
-databases[sqlite]
 autoflake
 black
 codecov
