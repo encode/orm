@@ -2,9 +2,9 @@ import typing
 
 import sqlalchemy
 import typesystem
-
 from typesystem.schemas import SchemaMetaclass
-from orm.exceptions import NoMatch, MultipleMatches
+
+from orm.exceptions import MultipleMatches, NoMatch
 
 
 class ModelMetaclass(SchemaMetaclass):
@@ -63,34 +63,33 @@ class QuerySet:
     def filter(self, **kwargs):
         filter_clauses = self.filter_clauses
         for key, value in kwargs.items():
-            if '__' in key:
+            if "__" in key:
                 key, op = key.split("__")
             else:
-                op = 'exact'
+                op = "exact"
 
+            # Map the operation code onto SQLAlchemy's ColumnElement
+            # https://docs.sqlalchemy.org/en/latest/core/sqlelement.html#sqlalchemy.sql.expression.ColumnElement
             op_attr = {
-                'exact': '__eq__',
-                'iexact': 'ilike',
-                'contains': 'like',
-                'icontains': 'ilike',
-                'in': 'in_',
-                'gt': '__gt__',
-                'gte': '__ge__',
-                'lt': '__lt__',
-                'lte': '__le__',
+                "exact": "__eq__",
+                "iexact": "ilike",
+                "contains": "like",
+                "icontains": "ilike",
+                "in": "in_",
+                "gt": "__gt__",
+                "gte": "__ge__",
+                "lt": "__lt__",
+                "lte": "__le__",
             }[op]
 
-            if op in ['contains', 'icontains']:
-                value = '%' + value + '%'
+            if op in ["contains", "icontains"]:
+                value = "%" + value + "%"
 
             column = self.table.columns[key]
             clause = getattr(column, op_attr)(value)
             filter_clauses.append(clause)
 
-        return self.__class__(
-            model_cls=self.model_cls,
-            filter_clauses=filter_clauses
-        )
+        return self.__class__(model_cls=self.model_cls, filter_clauses=filter_clauses)
 
     async def all(self, **kwargs):
         if kwargs:
@@ -104,7 +103,7 @@ class QuerySet:
         if kwargs:
             return await self.filter(**kwargs).get()
 
-        expr = self.build_select_expression()
+        expr = self.build_select_expression().limit(2)
         rows = await self.database.fetch_all(expr)
 
         if not rows:
