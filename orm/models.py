@@ -122,16 +122,9 @@ class QuerySet:
         )
         kwargs = validator.validate(kwargs)
 
-        raw_kwargs = {}
-        for key, value in kwargs.items():
-            if isinstance(value, Model):
-                raw_kwargs[key] = value.pk
-            else:
-                raw_kwargs[key] = value
-
         # Build the insert expression.
         expr = self.table.insert()
-        expr = expr.values(**raw_kwargs)
+        expr = expr.values(**kwargs)
 
         # Execute the insert, and return a new model instance.
         instance = self.model_cls(kwargs)
@@ -147,12 +140,12 @@ class Model(typesystem.Schema, metaclass=ModelMetaclass):
     def __init__(self, *args, **kwargs):
         if 'pk' in kwargs:
             kwargs[self.__pkname__] = kwargs.pop('pk')
-        if args and isinstance(args[0], dict):
-            item = args[0]
-            for key, field in self.fields.items():
-                if key in item and isinstance(field, ForeignKey):
-                    item[key] = field.validate(item[key])
         super().__init__(*args, **kwargs)
+        for key, field in self.fields.items():
+            if hasattr(self, key):
+                value = getattr(self, key)
+                value = field.expand_relationship(value)
+                setattr(self, key, value)
 
     @property
     def pk(self):
@@ -168,17 +161,10 @@ class Model(typesystem.Schema, metaclass=ModelMetaclass):
         validator = typesystem.Object(properties=fields)
         kwargs = validator.validate(kwargs)
 
-        raw_kwargs = {}
-        for key, value in kwargs.items():
-            if isinstance(value, Model):
-                raw_kwargs[key] = value.pk
-            else:
-                raw_kwargs[key] = value
-
         # Build the update expression.
         pk_column = getattr(self.__table__.c, self.__pkname__)
         expr = self.__table__.update()
-        expr = expr.values(**raw_kwargs).where(pk_column == self.pk)
+        expr = expr.values(**kwargs).where(pk_column == self.pk)
 
         # Perform the update.
         await self.__database__.execute(expr)
@@ -194,3 +180,15 @@ class Model(typesystem.Schema, metaclass=ModelMetaclass):
 
         # Perform the delete.
         await self.__database__.execute(expr)
+
+    async def load(self):
+        # Build the select expression.
+        pk_column = getattr(self.__table__.c, self.__pkname__)
+        expr = self.__table__.select().where(pk_column == self.pk)
+
+        # Perform the fetch.
+        row = await self.__database__.fetch_one(expr)
+
+        # Update the instance.
+        for key, value in dict(row).items():
+            setattr(self, key, value)

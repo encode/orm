@@ -35,6 +35,9 @@ class ModelField:
     def get_column_type(self) -> sqlalchemy.types.TypeEngine:
         raise NotImplementedError()  # pragma: no cover
 
+    def expand_relationship(self, value):
+        return value
+
 
 class String(ModelField, typesystem.String):
     def get_column_type(self):
@@ -57,12 +60,11 @@ class ForeignKey(ModelField, typesystem.Field):
         self.to = to
 
     def validate(self, value, strict=False):
-        if isinstance(value, self.to):
-            return value
-        to_column = self.to.fields[self.to.__pkname__]
-        pk = to_column.validate(value, strict=strict)
-        return self.to(pk=pk)
+        return value.pk
 
     def get_column_type(self):
         to_column = self.to.fields[self.to.__pkname__]
         return to_column.get_column_type()
+
+    def expand_relationship(self, value):
+        return self.to({self.to.__pkname__: value})

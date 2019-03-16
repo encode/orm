@@ -61,4 +61,8 @@ async def test_model_crud():
     await Track.objects.create(album=album, title="Bar", position=2)
     await Track.objects.create(album=album, title="Baz", position=3)
 
-    album = await Album.objects.create(name="The coders, remixed")
+    track = await Track.objects.get(title="Foo")
+    assert track.album.pk == album.pk
+    assert not hasattr(track.album, 'name')
+    await track.album.load()
+    assert track.album.name == "The coders"
