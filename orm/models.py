@@ -5,6 +5,7 @@ import typesystem
 from typesystem.schemas import SchemaMetaclass
 
 from orm.exceptions import MultipleMatches, NoMatch
+from orm.fields import ForeignKey
 
 
 class ModelMetaclass(SchemaMetaclass):
@@ -121,9 +122,16 @@ class QuerySet:
         )
         kwargs = validator.validate(kwargs)
 
+        raw_kwargs = {}
+        for key, value in kwargs.items():
+            if isinstance(value, Model):
+                raw_kwargs[key] = value.pk
+            else:
+                raw_kwargs[key] = value
+
         # Build the insert expression.
         expr = self.table.insert()
-        expr = expr.values(**kwargs)
+        expr = expr.values(**raw_kwargs)
 
         # Execute the insert, and return a new model instance.
         instance = self.model_cls(kwargs)
@@ -135,6 +143,16 @@ class Model(typesystem.Schema, metaclass=ModelMetaclass):
     __abstract__ = True
 
     objects = QuerySet()
+
+    def __init__(self, *args, **kwargs):
+        if 'pk' in kwargs:
+            kwargs[self.__pkname__] = kwargs.pop('pk')
+        if args and isinstance(args[0], dict):
+            item = args[0]
+            for key, field in self.fields.items():
+                if key in item and isinstance(field, ForeignKey):
+                    item[key] = field.validate(item[key])
+        super().__init__(*args, **kwargs)
 
     @property
     def pk(self):
@@ -150,10 +168,17 @@ class Model(typesystem.Schema, metaclass=ModelMetaclass):
         validator = typesystem.Object(properties=fields)
         kwargs = validator.validate(kwargs)
 
+        raw_kwargs = {}
+        for key, value in kwargs.items():
+            if isinstance(value, Model):
+                raw_kwargs[key] = value.pk
+            else:
+                raw_kwargs[key] = value
+
         # Build the update expression.
         pk_column = getattr(self.__table__.c, self.__pkname__)
         expr = self.__table__.update()
-        expr = expr.values(**kwargs).where(pk_column == self.pk)
+        expr = expr.values(**raw_kwargs).where(pk_column == self.pk)
 
         # Perform the update.
         await self.__database__.execute(expr)

@@ -49,3 +49,20 @@ class Integer(ModelField, typesystem.Integer):
 class Boolean(ModelField, typesystem.Boolean):
     def get_column_type(self):
         return sqlalchemy.Boolean()
+
+
+class ForeignKey(ModelField, typesystem.Field):
+    def __init__(self, to, allow_null: bool = False):
+        super().__init__(allow_null=allow_null)
+        self.to = to
+
+    def validate(self, value, strict=False):
+        if isinstance(value, self.to):
+            return value
+        to_column = self.to.fields[self.to.__pkname__]
+        pk = to_column.validate(value, strict=strict)
+        return self.to(pk=pk)
+
+    def get_column_type(self):
+        to_column = self.to.fields[self.to.__pkname__]
+        return to_column.get_column_type()
