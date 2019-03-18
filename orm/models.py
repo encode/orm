@@ -121,6 +121,9 @@ class QuerySet:
             if op in ["contains", "icontains"]:
                 value = "%" + value + "%"
 
+            if isinstance(value, Model):
+                value = value.pk
+
             clause = getattr(column, op_attr)(value)
             filter_clauses.append(clause)
 

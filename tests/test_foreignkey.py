@@ -113,8 +113,11 @@ async def test_fk_filter():
             assert track.album.name == "Fantasies"
 
         tracks = await Track.objects.filter(album__name__icontains="fan").all()
-        for track in tracks:
-            print(track)
         assert len(tracks) == 3
         for track in tracks:
             assert track.album.name == "Fantasies"
+
+        tracks = await Track.objects.filter(album=malibu).select_related("album").all()
+        assert len(tracks) == 3
+        for track in tracks:
+            assert track.album.name == "Malibu"
