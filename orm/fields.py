@@ -88,6 +88,11 @@ class Time(ModelField, typesystem.Time):
         return sqlalchemy.Time()
 
 
+class JSON(ModelField, typesystem.Any):
+    def get_column_type(self):
+        return sqlalchemy.JSON()
+
+
 class ForeignKey(ModelField, typesystem.Field):
     def __init__(self, to, allow_null: bool = False):
         super().__init__(allow_null=allow_null)
