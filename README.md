@@ -8,7 +8,8 @@ The `orm` package is an async ORM for Python, with support for Postgres,
 MySQL, and SQLite.
 
 It uses [SQLAlchemy core][sqlalchemy-core] for query building,
-and [the `databases` package][databases] for cross-database async support.
+[`databases`][databases] for cross-database async support,
+and [`typesystem`][typesystem] for data validation.
 
 Because ORM is built on SQLAlchemy core, you can use Alembic to provide
 database migrations.
@@ -131,5 +132,36 @@ tracks = Track.objects.filter(album__name__iexact="fantasies")
 assert len(tracks) == 2
 ```
 
+# DataTypes
+
+The following keyword arguments are supported on all field types.
+
+* `primary_key`
+* `allow_null`
+* `default`
+* `index`
+* `unique`
+
+All fields are required unless one of the following is set:
+
+* `allow_null` - Creates a nullable column. Sets the default to `None`.
+* `allow_blank` - Allow empty strings to validate. Sets the default to `""`.
+* `default` - Set a default value for the field.
+
+The following column types are supported.
+See TypeSystem for [type-specific validation keyword arguments][typesystem-fields].
+
+* `orm.String(max_length)`
+* `orm.Text()`
+* `orm.Boolean()`
+* `orm.Integer()`
+* `orm.Float()`
+* `orm.Date()`
+* `orm.Time()`
+* `orm.DateTime()`
+* `orm.JSON()`
+
 [sqlalchemy-core]: https://docs.sqlalchemy.org/en/latest/core/
 [databases]: https://github.com/encode/databases
+[typesystem]: https://github.com/encode/typesystem
+[typesystem-fields]: https://www.encode.io/typesystem/fields/
