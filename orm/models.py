@@ -67,7 +67,7 @@ class QuerySet:
 
     def build_select_expression(self):
         tables = [self.table]
-        select_from = None
+        select_from = self.table
 
         for item in self._select_related:
             model_cls = self.model_cls
@@ -78,8 +78,7 @@ class QuerySet:
                 tables.append(model_cls.__table__)
 
         expr = sqlalchemy.sql.select(tables)
-        if select_from is not None:
-            expr = expr.select_from(select_from)
+        expr = expr.select_from(select_from)
 
         if self.filter_clauses:
             if len(self.filter_clauses) == 1:

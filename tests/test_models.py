@@ -71,66 +71,69 @@ def test_model_pk():
 
 @async_adapter
 async def test_model_crud():
-    users = await User.objects.all()
-    assert users == []
+    async with database:
+        users = await User.objects.all()
+        assert users == []
 
-    user = await User.objects.create(name="Tom")
-    users = await User.objects.all()
-    assert user.name == "Tom"
-    assert user.pk is not None
-    assert users == [user]
+        user = await User.objects.create(name="Tom")
+        users = await User.objects.all()
+        assert user.name == "Tom"
+        assert user.pk is not None
+        assert users == [user]
 
-    lookup = await User.objects.get()
-    assert lookup == user
+        lookup = await User.objects.get()
+        assert lookup == user
 
-    await user.update(name="Jane")
-    users = await User.objects.all()
-    assert user.name == "Jane"
-    assert user.pk is not None
-    assert users == [user]
+        await user.update(name="Jane")
+        users = await User.objects.all()
+        assert user.name == "Jane"
+        assert user.pk is not None
+        assert users == [user]
 
-    await user.delete()
-    users = await User.objects.all()
-    assert users == []
+        await user.delete()
+        users = await User.objects.all()
+        assert users == []
 
 
 @async_adapter
 async def test_model_get():
-    with pytest.raises(orm.NoMatch):
-        await User.objects.get()
+    async with database:
+        with pytest.raises(orm.NoMatch):
+            await User.objects.get()
 
-    user = await User.objects.create(name="Tom")
-    lookup = await User.objects.get()
-    assert lookup == user
+        user = await User.objects.create(name="Tom")
+        lookup = await User.objects.get()
+        assert lookup == user
 
-    user = await User.objects.create(name="Jane")
-    with pytest.raises(orm.MultipleMatches):
-        await User.objects.get()
+        user = await User.objects.create(name="Jane")
+        with pytest.raises(orm.MultipleMatches):
+            await User.objects.get()
 
 
 @async_adapter
 async def test_model_filter():
-    await User.objects.create(name="Tom")
-    await User.objects.create(name="Jane")
-    await User.objects.create(name="Lucy")
+    async with database:
+        await User.objects.create(name="Tom")
+        await User.objects.create(name="Jane")
+        await User.objects.create(name="Lucy")
 
-    user = await User.objects.get(name="Lucy")
-    assert user.name == "Lucy"
+        user = await User.objects.get(name="Lucy")
+        assert user.name == "Lucy"
 
-    with pytest.raises(orm.NoMatch):
-        await User.objects.get(name="Jim")
+        with pytest.raises(orm.NoMatch):
+            await User.objects.get(name="Jim")
 
-    await Product.objects.create(name="T-Shirt", rating=5, in_stock=True)
-    await Product.objects.create(name="Dress", rating=4)
-    await Product.objects.create(name="Coat", rating=3, in_stock=True)
+        await Product.objects.create(name="T-Shirt", rating=5, in_stock=True)
+        await Product.objects.create(name="Dress", rating=4)
+        await Product.objects.create(name="Coat", rating=3, in_stock=True)
 
-    product = await Product.objects.get(name__iexact="t-shirt", rating=5)
-    assert product.pk is not None
-    assert product.name == "T-Shirt"
-    assert product.rating == 5
+        product = await Product.objects.get(name__iexact="t-shirt", rating=5)
+        assert product.pk is not None
+        assert product.name == "T-Shirt"
+        assert product.rating == 5
 
-    products = await Product.objects.all(rating__gte=2, in_stock=True)
-    assert len(products) == 2
+        products = await Product.objects.all(rating__gte=2, in_stock=True)
+        assert len(products) == 2
 
-    products = await Product.objects.all(name__icontains="T")
-    assert len(products) == 2
+        products = await Product.objects.all(name__icontains="T")
+        assert len(products) == 2

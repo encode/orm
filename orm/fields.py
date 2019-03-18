@@ -45,8 +45,17 @@ class ModelField:
 
 
 class String(ModelField, typesystem.String):
+    def __init__(self, **kwargs):
+        assert 'max_length' in kwargs, 'max_length is required'
+        super().__init__(**kwargs)
+
     def get_column_type(self):
         return sqlalchemy.String(length=self.max_length)
+
+
+class Text(ModelField, typesystem.Text):
+    def get_column_type(self):
+        return sqlalchemy.Text()
 
 
 class Integer(ModelField, typesystem.Integer):
@@ -54,9 +63,29 @@ class Integer(ModelField, typesystem.Integer):
         return sqlalchemy.Integer()
 
 
+class Float(ModelField, typesystem.Float):
+    def get_column_type(self):
+        return sqlalchemy.Float()
+
+
 class Boolean(ModelField, typesystem.Boolean):
     def get_column_type(self):
         return sqlalchemy.Boolean()
+
+
+class DateTime(ModelField, typesystem.DateTime):
+    def get_column_type(self):
+        return sqlalchemy.DateTime()
+
+
+class Date(ModelField, typesystem.Date):
+    def get_column_type(self):
+        return sqlalchemy.Date()
+
+
+class Time(ModelField, typesystem.Time):
+    def get_column_type(self):
+        return sqlalchemy.Time()
 
 
 class ForeignKey(ModelField, typesystem.Field):
