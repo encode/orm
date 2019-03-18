@@ -97,6 +97,9 @@ class QuerySet:
         for key, value in kwargs.items():
             if "__" in key:
                 parts = key.split("__")
+
+                # Determine if we should treat the final part as a
+                # filter operator or as a related field.
                 if parts[-1] in FILTER_OPERATORS:
                     op = parts[-1]
                     field_name = parts[-2]
@@ -108,7 +111,7 @@ class QuerySet:
 
                 model_cls = self.model_cls
                 if related_parts:
-                    # Add an implied select_related
+                    # Add any implied select_related
                     related_str = "__".join(related_parts)
                     if related_str not in select_related:
                         select_related.append(related_str)
