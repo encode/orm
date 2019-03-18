@@ -132,7 +132,7 @@ tracks = Track.objects.filter(album__name__iexact="fantasies")
 assert len(tracks) == 2
 ```
 
-## DataTypes
+## Data types
 
 The following keyword arguments are supported on all field types.
 
