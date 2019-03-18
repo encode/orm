@@ -28,6 +28,7 @@ class Example(orm.Model):
     created_time = orm.Time(default=time)
     description = orm.Text(allow_blank=True)
     value = orm.Float(allow_null=True)
+    data = orm.JSON(default={})
 
 
 @pytest.fixture(autouse=True, scope="module")
@@ -62,3 +63,9 @@ async def test_model_crud():
         assert example.created_day == datetime.date.today()
         assert example.description == ''
         assert example.value is None
+        assert example.data == {}
+
+        await example.update(data={"foo": 123}, value=123.456)
+        example = await Example.objects.get()
+        assert example.value == 123.456
+        assert example.data == {"foo": 123}
