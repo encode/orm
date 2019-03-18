@@ -8,6 +8,19 @@ from orm.exceptions import MultipleMatches, NoMatch
 from orm.fields import ForeignKey
 
 
+FILTER_OPERATORS = {
+    "exact": "__eq__",
+    "iexact": "ilike",
+    "contains": "like",
+    "icontains": "ilike",
+    "in": "in_",
+    "gt": "__gt__",
+    "gte": "__ge__",
+    "lt": "__lt__",
+    "lte": "__le__",
+}
+
+
 class ModelMetaclass(SchemaMetaclass):
     def __new__(
         cls: type, name: str, bases: typing.Sequence[type], attrs: dict
@@ -62,7 +75,7 @@ class QuerySet:
 
         expr = sqlalchemy.sql.select(tables)
         if len(tables) > 1:
-            expr.select_from(select_from)
+            expr = expr.select_from(select_from)
 
         if self.filter_clauses:
             if len(self.filter_clauses) == 1:
@@ -74,37 +87,47 @@ class QuerySet:
 
     def filter(self, **kwargs):
         filter_clauses = self.filter_clauses
+        select_related = list(self._select_related)
+
         for key, value in kwargs.items():
             if "__" in key:
-                key, op = key.split("__")
+                parts = key.split("__")
+                if parts[-1] in FILTER_OPERATORS:
+                    op = parts[-1]
+                    field_name = parts[-2]
+                    related_parts = parts[:-2]
+                else:
+                    op = "exact"
+                    field_name = parts[-1]
+                    related_parts = parts[:-1]
+
+                model_cls = self.model_cls
+                if related_parts:
+                    for part in related_parts:
+                        model_cls = model_cls.fields[part].to
+                    related_str = "__".join(related_parts)
+                    if related_str not in select_related:
+                        select_related.append(related_str)
+                column = model_cls.__table__.columns[field_name]
+
             else:
                 op = "exact"
+                column = self.table.columns[key]
 
             # Map the operation code onto SQLAlchemy's ColumnElement
             # https://docs.sqlalchemy.org/en/latest/core/sqlelement.html#sqlalchemy.sql.expression.ColumnElement
-            op_attr = {
-                "exact": "__eq__",
-                "iexact": "ilike",
-                "contains": "like",
-                "icontains": "ilike",
-                "in": "in_",
-                "gt": "__gt__",
-                "gte": "__ge__",
-                "lt": "__lt__",
-                "lte": "__le__",
-            }[op]
+            op_attr = FILTER_OPERATORS[op]
 
             if op in ["contains", "icontains"]:
                 value = "%" + value + "%"
 
-            column = self.table.columns[key]
             clause = getattr(column, op_attr)(value)
             filter_clauses.append(clause)
 
         return self.__class__(
             model_cls=self.model_cls,
             filter_clauses=filter_clauses,
-            select_related=self._select_related,
+            select_related=select_related,
         )
 
     def select_related(self, related):
