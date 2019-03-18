@@ -63,6 +63,11 @@ def test_model_class():
     assert isinstance(User.__table__, sqlalchemy.Table)
 
 
+def test_model_pk():
+    user = User(pk=1)
+    assert user.pk == 1
+    assert user.id == 1
+
 @async_adapter
 async def test_model_crud():
     users = await User.objects.all()
