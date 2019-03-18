@@ -141,11 +141,6 @@ class Model(typesystem.Schema, metaclass=ModelMetaclass):
         if 'pk' in kwargs:
             kwargs[self.__pkname__] = kwargs.pop('pk')
         super().__init__(*args, **kwargs)
-        for key, field in self.fields.items():
-            if hasattr(self, key):
-                value = getattr(self, key)
-                value = field.expand_relationship(value)
-                setattr(self, key, value)
 
     @property
     def pk(self):
@@ -192,3 +187,10 @@ class Model(typesystem.Schema, metaclass=ModelMetaclass):
         # Update the instance.
         for key, value in dict(row).items():
             setattr(self, key, value)
+
+    def __setattr__(self, key, value):
+        if key in self.fields:
+            # Setting a relationship to a raw pk value should set a
+            # fully-fledged relationship instance, with just the pk loaded.
+            value = self.fields[key].expand_relationship(value)
+        super().__setattr__(key, value)
