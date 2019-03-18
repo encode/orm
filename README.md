@@ -1,8 +1,16 @@
 # ORM
 
-**IN PROGRESS**
-
-*Seriously, it's in progress. But it's a nice start.*
+<p>
+<a href="https://travis-ci.org/encode/orm">
+    <img src="https://travis-ci.org/encode/orm.svg?branch=master" alt="Build Status">
+</a>
+<a href="https://codecov.io/gh/encode/orm">
+    <img src="https://codecov.io/gh/encode/orm/branch/master/graph/badge.svg" alt="Coverage">
+</a>
+<a href="https://pypi.org/project/orm/">
+    <img src="https://badge.fury.io/py/orm.svg" alt="Package version">
+</a>
+</p>
 
 The `orm` package is an async ORM for Python, with support for Postgres,
 MySQL, and SQLite. ORM is built with:
