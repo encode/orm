@@ -2,8 +2,7 @@
 
 **IN PROGRESS**
 
-*Seriously, it's in progress - we don't even have foreign key support in here
-yet. But it's a nice start.*
+*Seriously, it's in progress. But it's a nice start.*
 
 **Note**: Use `ipython` to try this from the console, since it supports `await`.
 
