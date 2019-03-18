@@ -109,7 +109,7 @@ await track.album.load()
 assert track.album.name == "Malibu"
 
 # This time, fetch an instance, loading the foreign key relationship.
-track = await Track.objects.select_related("album).get(title="The Bird")
+track = await Track.objects.select_related("album").get(title="The Bird")
 assert track.album.name == "Malibu"
 
 # Fetch instances, with a filter across an FK relationship.
