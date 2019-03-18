@@ -32,6 +32,35 @@ class Track(orm.Model):
     position = orm.Integer()
 
 
+class Organisation(orm.Model):
+    __tablename__ = "org"
+    __metadata__ = metadata
+    __database__ = database
+
+    id = orm.Integer(primary_key=True)
+    ident = orm.String(max_length=100)
+
+
+class Team(orm.Model):
+    __tablename__ = "team"
+    __metadata__ = metadata
+    __database__ = database
+
+    id = orm.Integer(primary_key=True)
+    org = orm.ForeignKey(Organisation)
+    name = orm.String(max_length=100)
+
+
+class Member(orm.Model):
+    __tablename__ = "member"
+    __metadata__ = metadata
+    __database__ = database
+
+    id = orm.Integer(primary_key=True)
+    team = orm.ForeignKey(Team)
+    email = orm.String(max_length=100)
+
+
 @pytest.fixture(autouse=True, scope="module")
 def create_test_database():
     engine = sqlalchemy.create_engine(DATABASE_URL)
@@ -121,3 +150,24 @@ async def test_fk_filter():
         assert len(tracks) == 3
         for track in tracks:
             assert track.album.name == "Malibu"
+
+
+@async_adapter
+async def test_multiple_fk():
+    async with database:
+        acme = await Organisation.objects.create(ident="ACME Ltd")
+        red_team = await Team.objects.create(org=acme, name="Red Team")
+        blue_team = await Team.objects.create(org=acme, name="Blue Team")
+        await Member.objects.create(team=red_team, email="a@example.org")
+        await Member.objects.create(team=red_team, email="b@example.org")
+        await Member.objects.create(team=blue_team, email="c@example.org")
+        await Member.objects.create(team=blue_team, email="d@example.org")
+
+        other = await Organisation.objects.create(ident="Other ltd")
+        team = await Team.objects.create(org=other, name="Green Team")
+        await Member.objects.create(team=team, email="e@example.org")
+
+        members = await Member.objects.select_related('team__org').filter(team__org__ident="ACME Ltd").all()
+        assert len(members) == 4
+        for member in members:
+            assert member.team.org.ident == "ACME Ltd"

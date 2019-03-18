@@ -67,14 +67,18 @@ class QuerySet:
 
     def build_select_expression(self):
         tables = [self.table]
-        select_from = self.table
+        select_from = None
+
         for item in self._select_related:
-            to_table = self.model_cls.fields[item].to.__table__
-            tables.append(to_table)
-            select_from = sqlalchemy.sql.join(select_from, to_table)
+            model_cls = self.model_cls
+            select_from = self.table
+            for part in item.split("__"):
+                model_cls = model_cls.fields[part].to
+                select_from = sqlalchemy.sql.join(select_from, model_cls.__table__)
+                tables.append(model_cls.__table__)
 
         expr = sqlalchemy.sql.select(tables)
-        if len(tables) > 1:
+        if select_from is not None:
             expr = expr.select_from(select_from)
 
         if self.filter_clauses:
@@ -83,6 +87,7 @@ class QuerySet:
             else:
                 clause = sqlalchemy.sql.and_(*self.filter_clauses)
             expr = expr.where(clause)
+
         return expr
 
     def filter(self, **kwargs):
@@ -103,11 +108,16 @@ class QuerySet:
 
                 model_cls = self.model_cls
                 if related_parts:
-                    for part in related_parts:
-                        model_cls = model_cls.fields[part].to
+                    # Add an implied select_related
                     related_str = "__".join(related_parts)
                     if related_str not in select_related:
                         select_related.append(related_str)
+
+                    # Walk the relationships to the actual model class
+                    # against which the comparison is being made.
+                    for part in related_parts:
+                        model_cls = model_cls.fields[part].to
+
                 column = model_cls.__table__.columns[field_name]
 
             else:
@@ -244,10 +254,16 @@ class Model(typesystem.Schema, metaclass=ModelMetaclass):
     def from_row(cls, row, select_related=[]):
         item = {}
         for related in select_related:
-            item[related] = cls.fields[related].to.from_row(row)
+            if '__' in related:
+                first_part, remainder = related.split('__', 1)
+                model_cls = cls.fields[first_part].to
+                item[first_part] = model_cls.from_row(row, select_related=[remainder])
+            else:
+                model_cls = cls.fields[related].to
+                item[related] = model_cls.from_row(row)
 
         for column in cls.__table__.columns:
-            if column.name not in select_related:
+            if column.name not in item:
                 item[column.name] = row[column]
 
         return cls(item)
