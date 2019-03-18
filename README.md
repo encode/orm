@@ -4,6 +4,15 @@
 
 *Seriously, it's in progress. But it's a nice start.*
 
+The `orm` package is an async ORM for Python, with support for Postgres,
+MySQL, and SQLite.
+
+It uses [SQLAlchemy core][sqlalchemy-core] for query building,
+and [the `databases` package][databases] for cross-database async support.
+
+Because ORM is built on SQLAlchemy core, you can use Alembic to provide
+database migrations.
+
 **Note**: Use `ipython` to try this from the console, since it supports `await`.
 
 ```python
@@ -56,7 +65,7 @@ note = await Note.objects.get(pk=2)
 note.pk  # 2
 ```
 
-Foreign Keys...
+ORM supports loading and filtering across foreign keys...
 
 ```python
 import databases
@@ -87,6 +96,7 @@ class Track(orm.Model):
     position = orm.Integer()
 
 
+# Create some records to work with.
 malibu = await Album.objects.create(name="Malibu")
 await Track.objects.create(album=malibu, title="The Bird", position=1)
 await Track.objects.create(album=malibu, title="Heart don't stand a chance", position=2)
@@ -120,3 +130,6 @@ assert len(tracks) == 2
 tracks = Track.objects.filter(album__name__iexact="fantasies")
 assert len(tracks) == 2
 ```
+
+[sqlalchemy-core]: https://docs.sqlalchemy.org/en/latest/core/
+[databases]: https://github.com/encode/databases
