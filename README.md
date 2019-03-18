@@ -4,6 +4,16 @@
 
 *Seriously, it's in progress. But it's a nice start.*
 
+The `orm` package is an async ORM for Python, with support for Postgres,
+MySQL, and SQLite.
+
+It uses [SQLAlchemy core][sqlalchemy-core] for query building,
+[`databases`][databases] for cross-database async support,
+and [`typesystem`][typesystem] for data validation.
+
+Because ORM is built on SQLAlchemy core, you can use Alembic to provide
+database migrations.
+
 **Note**: Use `ipython` to try this from the console, since it supports `await`.
 
 ```python
@@ -56,7 +66,7 @@ note = await Note.objects.get(pk=2)
 note.pk  # 2
 ```
 
-Foreign Keys...
+ORM supports loading and filtering across foreign keys...
 
 ```python
 import databases
@@ -87,6 +97,7 @@ class Track(orm.Model):
     position = orm.Integer()
 
 
+# Create some records to work with.
 malibu = await Album.objects.create(name="Malibu")
 await Track.objects.create(album=malibu, title="The Bird", position=1)
 await Track.objects.create(album=malibu, title="Heart don't stand a chance", position=2)
@@ -120,3 +131,37 @@ assert len(tracks) == 2
 tracks = Track.objects.filter(album__name__iexact="fantasies")
 assert len(tracks) == 2
 ```
+
+# DataTypes
+
+The following keyword arguments are supported on all field types.
+
+* `primary_key`
+* `allow_null`
+* `default`
+* `index`
+* `unique`
+
+All fields are required unless one of the following is set:
+
+* `allow_null` - Creates a nullable column. Sets the default to `None`.
+* `allow_blank` - Allow empty strings to validate. Sets the default to `""`.
+* `default` - Set a default value for the field.
+
+The following column types are supported.
+See TypeSystem for [type-specific validation keyword arguments][typesystem-fields].
+
+* `orm.String(max_length)`
+* `orm.Text()`
+* `orm.Boolean()`
+* `orm.Integer()`
+* `orm.Float()`
+* `orm.Date()`
+* `orm.Time()`
+* `orm.DateTime()`
+* `orm.JSON()`
+
+[sqlalchemy-core]: https://docs.sqlalchemy.org/en/latest/core/
+[databases]: https://github.com/encode/databases
+[typesystem]: https://github.com/encode/typesystem
+[typesystem-fields]: https://www.encode.io/typesystem/fields/
