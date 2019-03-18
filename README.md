@@ -5,11 +5,11 @@
 *Seriously, it's in progress. But it's a nice start.*
 
 The `orm` package is an async ORM for Python, with support for Postgres,
-MySQL, and SQLite.
+MySQL, and SQLite. ORM is built with:
 
-It uses [SQLAlchemy core][sqlalchemy-core] for query building,
-[`databases`][databases] for cross-database async support,
-and [`typesystem`][typesystem] for data validation.
+* [SQLAlchemy core][sqlalchemy-core] for query building.
+* [`databases`][databases] for cross-database async support.
+* [`typesystem`][typesystem] for data validation.
 
 Because ORM is built on SQLAlchemy core, you can use Alembic to provide
 database migrations.
@@ -132,7 +132,7 @@ tracks = Track.objects.filter(album__name__iexact="fantasies")
 assert len(tracks) == 2
 ```
 
-# DataTypes
+## DataTypes
 
 The following keyword arguments are supported on all field types.
 
