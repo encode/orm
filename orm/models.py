@@ -252,7 +252,12 @@ class Model(typesystem.Schema, metaclass=ModelMetaclass):
 
     @classmethod
     def from_row(cls, row, select_related=[]):
+        """
+        Instantiate a model instance, given a database row.
+        """
         item = {}
+
+        # Instantiate any child instances first.
         for related in select_related:
             if '__' in related:
                 first_part, remainder = related.split('__', 1)
@@ -262,12 +267,12 @@ class Model(typesystem.Schema, metaclass=ModelMetaclass):
                 model_cls = cls.fields[related].to
                 item[related] = model_cls.from_row(row)
 
+        # Pull out the regular column values.
         for column in cls.__table__.columns:
             if column.name not in item:
                 item[column.name] = row[column]
 
         return cls(item)
-
 
     def __setattr__(self, key, value):
         if key in self.fields:
