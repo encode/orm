@@ -11,7 +11,7 @@ class ModelField:
         primary_key: bool = False,
         index: bool = False,
         unique: bool = False,
-        **kwargs: typing.Any
+        **kwargs: typing.Any,
     ) -> None:
         if primary_key:
             kwargs["allow_null"] = True
@@ -23,9 +23,11 @@ class ModelField:
     def get_column(self, name: str) -> sqlalchemy.Column:
         column_type = self.get_column_type()
         allow_null = getattr(self, "allow_null", False)
+        constraints = self.get_constraints()
         return sqlalchemy.Column(
             name,
             column_type,
+            *constraints,
             primary_key=self.primary_key,
             nullable=allow_null and not self.primary_key,
             index=self.index,
@@ -34,6 +36,9 @@ class ModelField:
 
     def get_column_type(self) -> sqlalchemy.types.TypeEngine:
         raise NotImplementedError()  # pragma: no cover
+
+    def get_constraints(self):
+        return []
 
     def expand_relationship(self, value):
         return value
@@ -62,9 +67,15 @@ class ForeignKey(ModelField, typesystem.Field):
     def validate(self, value, strict=False):
         return value.pk
 
+    def get_constraints(self):
+        fk_string = self.to.__tablename__ + "." + self.to.__pkname__
+        return [sqlalchemy.schema.ForeignKey(fk_string)]
+
     def get_column_type(self):
         to_column = self.to.fields[self.to.__pkname__]
         return to_column.get_column_type()
 
     def expand_relationship(self, value):
+        if isinstance(value, self.to):
+            return value
         return self.to({self.to.__pkname__: value})

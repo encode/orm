@@ -36,9 +36,10 @@ class ModelMetaclass(SchemaMetaclass):
 
 
 class QuerySet:
-    def __init__(self, model_cls=None, filter_clauses=None):
+    def __init__(self, model_cls=None, filter_clauses=None, select_related=None):
         self.model_cls = model_cls
         self.filter_clauses = [] if filter_clauses is None else filter_clauses
+        self._select_related = [] if select_related is None else select_related
 
     def __get__(self, instance, owner):
         return self.__class__(model_cls=owner)
@@ -52,7 +53,17 @@ class QuerySet:
         return self.model_cls.__table__
 
     def build_select_expression(self):
-        expr = self.table.select()
+        tables = [self.table]
+        select_from = self.table
+        for item in self._select_related:
+            to_table = self.model_cls.fields[item].to.__table__
+            tables.append(to_table)
+            select_from = sqlalchemy.sql.join(select_from, to_table)
+
+        expr = sqlalchemy.sql.select(tables)
+        if len(tables) > 1:
+            expr.select_from(select_from)
+
         if self.filter_clauses:
             if len(self.filter_clauses) == 1:
                 clause = self.filter_clauses[0]
@@ -90,7 +101,22 @@ class QuerySet:
             clause = getattr(column, op_attr)(value)
             filter_clauses.append(clause)
 
-        return self.__class__(model_cls=self.model_cls, filter_clauses=filter_clauses)
+        return self.__class__(
+            model_cls=self.model_cls,
+            filter_clauses=filter_clauses,
+            select_related=self._select_related,
+        )
+
+    def select_related(self, related):
+        if not isinstance(related, (list, tuple)):
+            related = [related]
+
+        related = list(self._select_related) + related
+        return self.__class__(
+            model_cls=self.model_cls,
+            filter_clauses=self.filter_clauses,
+            select_related=related,
+        )
 
     async def all(self, **kwargs):
         if kwargs:
@@ -98,7 +124,7 @@ class QuerySet:
 
         expr = self.build_select_expression()
         rows = await self.database.fetch_all(expr)
-        return [self.model_cls(dict(row)) for row in rows]
+        return [self.model_cls.from_row(row, select_related=self._select_related) for row in rows]
 
     async def get(self, **kwargs):
         if kwargs:
@@ -111,7 +137,7 @@ class QuerySet:
             raise NoMatch()
         if len(rows) > 1:
             raise MultipleMatches()
-        return self.model_cls(dict(rows[0]))
+        return self.model_cls.from_row(rows[0], select_related=self._select_related)
 
     async def create(self, **kwargs):
         # Validate the keyword arguments.
@@ -138,8 +164,8 @@ class Model(typesystem.Schema, metaclass=ModelMetaclass):
     objects = QuerySet()
 
     def __init__(self, *args, **kwargs):
-        if 'pk' in kwargs:
-            kwargs[self.__pkname__] = kwargs.pop('pk')
+        if "pk" in kwargs:
+            kwargs[self.__pkname__] = kwargs.pop("pk")
         super().__init__(*args, **kwargs)
 
     @property
@@ -188,9 +214,22 @@ class Model(typesystem.Schema, metaclass=ModelMetaclass):
         for key, value in dict(row).items():
             setattr(self, key, value)
 
+    @classmethod
+    def from_row(cls, row, select_related=[]):
+        item = {}
+        for related in select_related:
+            item[related] = cls.fields[related].to.from_row(row)
+
+        for column in cls.__table__.columns:
+            if column.name not in select_related:
+                item[column.name] = row[column]
+
+        return cls(item)
+
+
     def __setattr__(self, key, value):
         if key in self.fields:
-            # Setting a relationship to a raw pk value should set a
+            #  Setting a relationship to a raw pk value should set a
             # fully-fledged relationship instance, with just the pk loaded.
             value = self.fields[key].expand_relationship(value)
         super().__setattr__(key, value)

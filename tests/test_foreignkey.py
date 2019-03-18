@@ -1,10 +1,10 @@
 import asyncio
 import functools
 
-import databases
 import pytest
 import sqlalchemy
 
+import databases
 import orm
 
 DATABASE_URL = "sqlite:///test.db"
@@ -13,7 +13,7 @@ metadata = sqlalchemy.MetaData()
 
 
 class Album(orm.Model):
-    __tablename__ = "users"
+    __tablename__ = "album"
     __metadata__ = metadata
     __database__ = database
 
@@ -22,7 +22,7 @@ class Album(orm.Model):
 
 
 class Track(orm.Model):
-    __tablename__ = "product"
+    __tablename__ = "track"
     __metadata__ = metadata
     __database__ = database
 
@@ -56,13 +56,27 @@ def async_adapter(wrapped_func):
 
 @async_adapter
 async def test_model_crud():
-    album = await Album.objects.create(name="The coders")
-    await Track.objects.create(album=album, title="Foo", position=1)
-    await Track.objects.create(album=album, title="Bar", position=2)
-    await Track.objects.create(album=album, title="Baz", position=3)
+    async with database:
+        album = await Album.objects.create(name="The coders")
+        await Track.objects.create(album=album, title="Foo", position=1)
+        await Track.objects.create(album=album, title="Bar", position=2)
+        await Track.objects.create(album=album, title="Baz", position=3)
 
-    track = await Track.objects.get(title="Foo")
-    assert track.album.pk == album.pk
-    assert not hasattr(track.album, 'name')
-    await track.album.load()
-    assert track.album.name == "The coders"
+        track = await Track.objects.get(title="Foo")
+        assert track.album.pk == album.pk
+        assert not hasattr(track.album, "name")
+        await track.album.load()
+        assert track.album.name == "The coders"
+
+
+@async_adapter
+async def test_select_related():
+    async with database:
+        album = await Album.objects.create(name="The coders")
+        await Track.objects.create(album=album, title="Foo", position=1)
+        await Track.objects.create(album=album, title="Bar", position=2)
+        await Track.objects.create(album=album, title="Baz", position=3)
+
+        tracks = await Track.objects.select_related("album").all()
+        assert len(tracks) == 3
+        assert tracks[0].album.name == "The coders"

@@ -1,10 +1,10 @@
 import asyncio
 import functools
 
-import databases
 import pytest
 import sqlalchemy
 
+import databases
 import orm
 
 DATABASE_URL = "sqlite:///test.db"
@@ -67,6 +67,7 @@ def test_model_pk():
     user = User(pk=1)
     assert user.pk == 1
     assert user.id == 1
+
 
 @async_adapter
 async def test_model_crud():
