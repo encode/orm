@@ -5,6 +5,20 @@ import typesystem
 from typesystem.schemas import SchemaMetaclass
 
 from orm.exceptions import MultipleMatches, NoMatch
+from orm.fields import ForeignKey
+
+
+FILTER_OPERATORS = {
+    "exact": "__eq__",
+    "iexact": "ilike",
+    "contains": "like",
+    "icontains": "ilike",
+    "in": "in_",
+    "gt": "__gt__",
+    "gte": "__ge__",
+    "lt": "__lt__",
+    "lte": "__le__",
+}
 
 
 class ModelMetaclass(SchemaMetaclass):
@@ -35,9 +49,10 @@ class ModelMetaclass(SchemaMetaclass):
 
 
 class QuerySet:
-    def __init__(self, model_cls=None, filter_clauses=None):
+    def __init__(self, model_cls=None, filter_clauses=None, select_related=None):
         self.model_cls = model_cls
         self.filter_clauses = [] if filter_clauses is None else filter_clauses
+        self._select_related = [] if select_related is None else select_related
 
     def __get__(self, instance, owner):
         return self.__class__(model_cls=owner)
@@ -51,45 +66,93 @@ class QuerySet:
         return self.model_cls.__table__
 
     def build_select_expression(self):
-        expr = self.table.select()
+        tables = [self.table]
+        select_from = None
+
+        for item in self._select_related:
+            model_cls = self.model_cls
+            select_from = self.table
+            for part in item.split("__"):
+                model_cls = model_cls.fields[part].to
+                select_from = sqlalchemy.sql.join(select_from, model_cls.__table__)
+                tables.append(model_cls.__table__)
+
+        expr = sqlalchemy.sql.select(tables)
+        if select_from is not None:
+            expr = expr.select_from(select_from)
+
         if self.filter_clauses:
             if len(self.filter_clauses) == 1:
                 clause = self.filter_clauses[0]
             else:
                 clause = sqlalchemy.sql.and_(*self.filter_clauses)
             expr = expr.where(clause)
+
         return expr
 
     def filter(self, **kwargs):
         filter_clauses = self.filter_clauses
+        select_related = list(self._select_related)
+
         for key, value in kwargs.items():
             if "__" in key:
-                key, op = key.split("__")
+                parts = key.split("__")
+                if parts[-1] in FILTER_OPERATORS:
+                    op = parts[-1]
+                    field_name = parts[-2]
+                    related_parts = parts[:-2]
+                else:
+                    op = "exact"
+                    field_name = parts[-1]
+                    related_parts = parts[:-1]
+
+                model_cls = self.model_cls
+                if related_parts:
+                    # Add an implied select_related
+                    related_str = "__".join(related_parts)
+                    if related_str not in select_related:
+                        select_related.append(related_str)
+
+                    # Walk the relationships to the actual model class
+                    # against which the comparison is being made.
+                    for part in related_parts:
+                        model_cls = model_cls.fields[part].to
+
+                column = model_cls.__table__.columns[field_name]
+
             else:
                 op = "exact"
+                column = self.table.columns[key]
 
             # Map the operation code onto SQLAlchemy's ColumnElement
             # https://docs.sqlalchemy.org/en/latest/core/sqlelement.html#sqlalchemy.sql.expression.ColumnElement
-            op_attr = {
-                "exact": "__eq__",
-                "iexact": "ilike",
-                "contains": "like",
-                "icontains": "ilike",
-                "in": "in_",
-                "gt": "__gt__",
-                "gte": "__ge__",
-                "lt": "__lt__",
-                "lte": "__le__",
-            }[op]
+            op_attr = FILTER_OPERATORS[op]
 
             if op in ["contains", "icontains"]:
                 value = "%" + value + "%"
 
-            column = self.table.columns[key]
+            if isinstance(value, Model):
+                value = value.pk
+
             clause = getattr(column, op_attr)(value)
             filter_clauses.append(clause)
 
-        return self.__class__(model_cls=self.model_cls, filter_clauses=filter_clauses)
+        return self.__class__(
+            model_cls=self.model_cls,
+            filter_clauses=filter_clauses,
+            select_related=select_related,
+        )
+
+    def select_related(self, related):
+        if not isinstance(related, (list, tuple)):
+            related = [related]
+
+        related = list(self._select_related) + related
+        return self.__class__(
+            model_cls=self.model_cls,
+            filter_clauses=self.filter_clauses,
+            select_related=related,
+        )
 
     async def all(self, **kwargs):
         if kwargs:
@@ -97,7 +160,7 @@ class QuerySet:
 
         expr = self.build_select_expression()
         rows = await self.database.fetch_all(expr)
-        return [self.model_cls(dict(row)) for row in rows]
+        return [self.model_cls.from_row(row, select_related=self._select_related) for row in rows]
 
     async def get(self, **kwargs):
         if kwargs:
@@ -110,7 +173,7 @@ class QuerySet:
             raise NoMatch()
         if len(rows) > 1:
             raise MultipleMatches()
-        return self.model_cls(dict(rows[0]))
+        return self.model_cls.from_row(rows[0], select_related=self._select_related)
 
     async def create(self, **kwargs):
         # Validate the keyword arguments.
@@ -135,6 +198,11 @@ class Model(typesystem.Schema, metaclass=ModelMetaclass):
     __abstract__ = True
 
     objects = QuerySet()
+
+    def __init__(self, *args, **kwargs):
+        if "pk" in kwargs:
+            kwargs[self.__pkname__] = kwargs.pop("pk")
+        super().__init__(*args, **kwargs)
 
     @property
     def pk(self):
@@ -169,3 +237,46 @@ class Model(typesystem.Schema, metaclass=ModelMetaclass):
 
         # Perform the delete.
         await self.__database__.execute(expr)
+
+    async def load(self):
+        # Build the select expression.
+        pk_column = getattr(self.__table__.c, self.__pkname__)
+        expr = self.__table__.select().where(pk_column == self.pk)
+
+        # Perform the fetch.
+        row = await self.__database__.fetch_one(expr)
+
+        # Update the instance.
+        for key, value in dict(row).items():
+            setattr(self, key, value)
+
+    @classmethod
+    def from_row(cls, row, select_related=[]):
+        """
+        Instantiate a model instance, given a database row.
+        """
+        item = {}
+
+        # Instantiate any child instances first.
+        for related in select_related:
+            if '__' in related:
+                first_part, remainder = related.split('__', 1)
+                model_cls = cls.fields[first_part].to
+                item[first_part] = model_cls.from_row(row, select_related=[remainder])
+            else:
+                model_cls = cls.fields[related].to
+                item[related] = model_cls.from_row(row)
+
+        # Pull out the regular column values.
+        for column in cls.__table__.columns:
+            if column.name not in item:
+                item[column.name] = row[column]
+
+        return cls(item)
+
+    def __setattr__(self, key, value):
+        if key in self.fields:
+            #  Setting a relationship to a raw pk value should set a
+            # fully-fledged relationship instance, with just the pk loaded.
+            value = self.fields[key].expand_relationship(value)
+        super().__setattr__(key, value)

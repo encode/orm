@@ -1,10 +1,10 @@
 import asyncio
 import functools
 
-import databases
 import pytest
 import sqlalchemy
 
+import databases
 import orm
 
 DATABASE_URL = "sqlite:///test.db"
@@ -61,6 +61,12 @@ def test_model_class():
     assert isinstance(User.fields["name"], orm.String)
     assert User.fields["name"].max_length == 100
     assert isinstance(User.__table__, sqlalchemy.Table)
+
+
+def test_model_pk():
+    user = User(pk=1)
+    assert user.pk == 1
+    assert user.id == 1
 
 
 @async_adapter
