@@ -13,3 +13,6 @@ install:
 
 script:
     - scripts/test
+
+after_script:
+    - codecov
