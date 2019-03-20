@@ -2,7 +2,6 @@ import typing
 
 import sqlalchemy
 import typesystem
-from attr import attrs
 
 
 class ModelField:
@@ -46,7 +45,7 @@ class ModelField:
 
 class String(ModelField, typesystem.String):
     def __init__(self, **kwargs):
-        assert 'max_length' in kwargs, 'max_length is required'
+        assert "max_length" in kwargs, "max_length is required"
         super().__init__(**kwargs)
 
     def get_column_type(self):
