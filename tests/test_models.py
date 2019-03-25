@@ -6,6 +6,7 @@ import sqlalchemy
 
 import databases
 import orm
+import typesystem
 
 DATABASE_URL = "sqlite:///test.db"
 database = databases.Database(DATABASE_URL, force_rollback=True)
@@ -30,6 +31,15 @@ class Product(orm.Model):
     name = orm.String(max_length=100)
     rating = orm.Integer(minimum=1, maximum=5)
     in_stock = orm.Boolean(default=False)
+
+
+class Post(orm.Model):
+    __tablename__ = "post"
+    __metadata__ = metadata
+    __database__ = database
+
+    id = orm.Integer(primary_key=True)
+    slug = orm.String(max_length=100, unique=True)
 
 
 @pytest.fixture(autouse=True, scope="module")
@@ -137,3 +147,12 @@ async def test_model_filter():
 
         products = await Product.objects.all(name__icontains="T")
         assert len(products) == 2
+
+
+@async_adapter
+async def test_validate_unique():
+    slug = "hello-world"
+    async with database:
+        await Post.objects.create(slug=slug)
+        with pytest.raises(typesystem.ValidationError):
+            await Post.objects.create(slug=slug)

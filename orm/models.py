@@ -110,13 +110,13 @@ class QuerySet:
 
                 model_cls = self.model_cls
                 if related_parts:
-                    # Add any implied select_related
+                    #  Add any implied select_related
                     related_str = "__".join(related_parts)
                     if related_str not in select_related:
                         select_related.append(related_str)
 
                     # Walk the relationships to the actual model class
-                    # against which the comparison is being made.
+                    #  against which the comparison is being made.
                     for part in related_parts:
                         model_cls = model_cls.fields[part].to
 
@@ -162,7 +162,10 @@ class QuerySet:
 
         expr = self.build_select_expression()
         rows = await self.database.fetch_all(expr)
-        return [self.model_cls.from_row(row, select_related=self._select_related) for row in rows]
+        return [
+            self.model_cls.from_row(row, select_related=self._select_related)
+            for row in rows
+        ]
 
     async def get(self, **kwargs):
         if kwargs:
@@ -185,6 +188,22 @@ class QuerySet:
             properties=fields, required=required, additional_properties=False
         )
         kwargs = validator.validate(kwargs)
+
+        # Verify constraints on unique fields.
+        unique = {key: kwargs[key] for key, value in fields.items() if value.unique}
+        unique_error_messages = []
+        for key, value in unique.items():
+            expr = self.table.select()
+            column = getattr(self.table.c, key)
+            expr = expr.where(column == value)
+            row = await self.database.fetch_one(query=expr)
+            if row is not None:
+                text = f"{self.table.name} with {key}='{value}' already exists"
+                message = typesystem.Message(text=text, code="unique_exists")
+                unique_error_messages.append(message)
+
+        if unique_error_messages:
+            raise typesystem.ValidationError(messages=unique_error_messages)
 
         # Build the insert expression.
         expr = self.table.insert()
@@ -261,8 +280,8 @@ class Model(typesystem.Schema, metaclass=ModelMetaclass):
 
         # Instantiate any child instances first.
         for related in select_related:
-            if '__' in related:
-                first_part, remainder = related.split('__', 1)
+            if "__" in related:
+                first_part, remainder = related.split("__", 1)
                 model_cls = cls.fields[first_part].to
                 item[first_part] = model_cls.from_row(row, select_related=[remainder])
             else:
