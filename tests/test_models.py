@@ -137,3 +137,11 @@ async def test_model_filter():
 
         products = await Product.objects.all(name__icontains="T")
         assert len(products) == 2
+
+
+@async_adapter
+async def test_model_exists():
+    async with database:
+        await User.objects.create(name="Tom")
+        assert await User.objects.filter(name="Tom").exists()
+        assert not await User.objects.filter(name="Jane").exists()
