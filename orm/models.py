@@ -49,7 +49,7 @@ class ModelMetaclass(SchemaMetaclass):
 
 
 class ModelObject(typesystem.Object):
-    # NOTE: to be updated if/when typesystem handles validation of unique fieldss.
+    # NOTE: to be updated if/when typesystem handles validation of unique fields.
 
     def __init__(self, *args, queryset: "QuerySet", **kwargs):
         super().__init__(*args, **kwargs)
