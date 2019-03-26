@@ -110,13 +110,13 @@ class QuerySet:
 
                 model_cls = self.model_cls
                 if related_parts:
-                    #  Add any implied select_related
+                    # Add any implied select_related
                     related_str = "__".join(related_parts)
                     if related_str not in select_related:
                         select_related.append(related_str)
 
                     # Walk the relationships to the actual model class
-                    #  against which the comparison is being made.
+                    # against which the comparison is being made.
                     for part in related_parts:
                         model_cls = model_cls.fields[part].to
 
@@ -287,7 +287,7 @@ class Model(typesystem.Schema, metaclass=ModelMetaclass):
 
     def __setattr__(self, key, value):
         if key in self.fields:
-            #  Setting a relationship to a raw pk value should set a
+            # Setting a relationship to a raw pk value should set a
             # fully-fledged relationship instance, with just the pk loaded.
             value = self.fields[key].expand_relationship(value)
         super().__setattr__(key, value)
