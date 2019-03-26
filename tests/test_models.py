@@ -91,6 +91,9 @@ async def test_model_crud():
         assert user.pk is not None
         assert users == [user]
 
+        with pytest.raises(typesystem.ValidationError):
+            await User.objects.create(foo="is not a User field")
+
         lookup = await User.objects.get()
         assert lookup == user
 

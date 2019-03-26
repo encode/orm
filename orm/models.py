@@ -51,14 +51,11 @@ class ModelMetaclass(SchemaMetaclass):
 class ModelObject(typesystem.Object):
     # NOTE: to be updated if/when typesystem handles validation of unique fieldss.
 
-    def __init__(self, *args, queryset: "QuerySet" = None, **kwargs):
+    def __init__(self, *args, queryset: "QuerySet", **kwargs):
         super().__init__(*args, **kwargs)
         self.queryset = queryset
 
     async def validate_unique(self, value: dict):
-        if self.queryset is None:
-            return
-
         unique_properties = {
             key: value[key] for key, val in self.properties.items() if val.unique
         }
