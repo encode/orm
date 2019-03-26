@@ -159,8 +159,8 @@ class QuerySet:
     async def count(self) -> int:
         expr = self.build_select_expression()
         expr = sqlalchemy.func.count().select().select_from(expr)
-        count, = await self.database.fetch_one(expr)
-        return count
+        row = await self.database.fetch_one(expr)
+        return row[0]
 
     async def all(self, **kwargs):
         if kwargs:
