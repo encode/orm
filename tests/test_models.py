@@ -143,5 +143,5 @@ async def test_model_filter():
 async def test_model_exists():
     async with database:
         await User.objects.create(name="Tom")
-        assert await User.objects.filter(name="Tom").exists()
-        assert not await User.objects.filter(name="Jane").exists()
+        assert await User.objects.filter(name="Tom").exists() is True
+        assert await User.objects.filter(name="Jane").exists() is False

@@ -159,8 +159,8 @@ class QuerySet:
     async def exists(self) -> bool:
         expr = self.build_select_expression()
         expr = sqlalchemy.exists(expr).select()
-        exists, = await self.database.fetch_one(expr)
-        return exists
+        row = await self.database.fetch_one(expr)
+        return row[0]
 
     async def all(self, **kwargs):
         if kwargs:
