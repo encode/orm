@@ -100,6 +100,9 @@ async def test_model_crud():
         assert user.pk is not None
         assert users == [user]
 
+        with pytest.raises(ValueError):
+            await user.update(pk=42)
+
         await user.delete()
         users = await User.objects.all()
         assert users == []
@@ -154,5 +157,10 @@ async def test_validate_unique():
     slug = "hello-world"
     async with database:
         await Post.objects.create(slug=slug)
+
         with pytest.raises(typesystem.ValidationError):
             await Post.objects.create(slug=slug)
+
+        other = await Post.objects.create(slug="world-hello")
+        with pytest.raises(typesystem.ValidationError):
+            await other.update(slug=slug)

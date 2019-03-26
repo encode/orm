@@ -48,6 +48,55 @@ class ModelMetaclass(SchemaMetaclass):
         return new_model
 
 
+class ModelObject(typesystem.Object):
+    # NOTE: to be updated if/when typesystem handles validation of unique fieldss.
+
+    def __init__(self, *args, queryset: "QuerySet" = None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.queryset = queryset
+
+    async def validate_unique(self, value: dict):
+        if self.queryset is None:
+            return
+
+        unique_properties = {
+            key: value[key] for key, val in self.properties.items() if val.unique
+        }
+
+        error_messages = []
+
+        for key, val in unique_properties.items():
+            expr = self.queryset.table.select()
+            column = getattr(self.queryset.table.c, key)
+            expr = expr.where(column == val)
+            row = await self.queryset.database.fetch_one(query=expr)
+            if row is not None:
+                text = f"{self.queryset.table.name} with {key}='{val}' already exists"
+                message = typesystem.Message(text=text, code="unique_exists")
+                error_messages.append(message)
+
+        if error_messages:
+            raise typesystem.ValidationError(messages=error_messages)
+
+    async def validate(self, value: dict, strict: bool = False) -> typing.Any:
+        messages = []
+
+        try:
+            validated = super().validate(value, strict=strict)
+        except typesystem.ValidationError as exc:
+            messages.extend(exc.messages())
+
+        try:
+            await self.validate_unique(value)
+        except typesystem.ValidationError as exc:
+            messages.extend(exc.messages())
+
+        if messages:
+            raise typesystem.ValidationError(messages=messages)
+
+        return validated
+
+
 class QuerySet:
     def __init__(self, model_cls=None, filter_clauses=None, select_related=None):
         self.model_cls = model_cls
@@ -184,26 +233,13 @@ class QuerySet:
         # Validate the keyword arguments.
         fields = self.model_cls.fields
         required = [key for key, value in fields.items() if not value.has_default()]
-        validator = typesystem.Object(
-            properties=fields, required=required, additional_properties=False
+        validator = ModelObject(
+            properties=fields,
+            required=required,
+            additional_properties=False,
+            queryset=self,
         )
-        kwargs = validator.validate(kwargs)
-
-        # Verify constraints on unique fields.
-        unique = {key: kwargs[key] for key, value in fields.items() if value.unique}
-        unique_error_messages = []
-        for key, value in unique.items():
-            expr = self.table.select()
-            column = getattr(self.table.c, key)
-            expr = expr.where(column == value)
-            row = await self.database.fetch_one(query=expr)
-            if row is not None:
-                text = f"{self.table.name} with {key}='{value}' already exists"
-                message = typesystem.Message(text=text, code="unique_exists")
-                unique_error_messages.append(message)
-
-        if unique_error_messages:
-            raise typesystem.ValidationError(messages=unique_error_messages)
+        kwargs = await validator.validate(kwargs)
 
         # Build the insert expression.
         expr = self.table.insert()
@@ -234,10 +270,16 @@ class Model(typesystem.Schema, metaclass=ModelMetaclass):
         setattr(self, self.__pkname__, value)
 
     async def update(self, **kwargs):
+        # Prevent primary key from being updated.
+        if "pk" in kwargs or self.__pkname__ in kwargs:
+            raise ValueError(
+                f"the primary key of a model instance cannot be updated"
+            )
+
         # Validate the keyword arguments.
         fields = {key: field for key, field in self.fields.items() if key in kwargs}
-        validator = typesystem.Object(properties=fields)
-        kwargs = validator.validate(kwargs)
+        validator = ModelObject(properties=fields, queryset=self.objects)
+        kwargs = await validator.validate(kwargs)
 
         # Build the update expression.
         pk_column = getattr(self.__table__.c, self.__pkname__)
