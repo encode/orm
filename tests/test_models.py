@@ -137,3 +137,14 @@ async def test_model_filter():
 
         products = await Product.objects.all(name__icontains="T")
         assert len(products) == 2
+
+
+@async_adapter
+async def test_model_count():
+    async with database:
+        await User.objects.create(name="Tom")
+        await User.objects.create(name="Jane")
+        await User.objects.create(name="Lucy")
+
+        assert await User.objects.count() == 3
+        assert await User.objects.filter(name__icontains="T").count() == 1

@@ -110,13 +110,13 @@ class QuerySet:
 
                 model_cls = self.model_cls
                 if related_parts:
-                    # Add any implied select_related
+                    # Add any implied select_related
                     related_str = "__".join(related_parts)
                     if related_str not in select_related:
                         select_related.append(related_str)
 
                     # Walk the relationships to the actual model class
-                    # against which the comparison is being made.
+                    # against which the comparison is being made.
                     for part in related_parts:
                         model_cls = model_cls.fields[part].to
 
@@ -156,13 +156,21 @@ class QuerySet:
             select_related=related,
         )
 
+    async def count(self) -> int:
+        expr = self.build_select_expression()
+        expr = sqlalchemy.func.count().select().select_from(expr)
+        return await self.database.fetch_val(expr)
+
     async def all(self, **kwargs):
         if kwargs:
             return await self.filter(**kwargs).all()
 
         expr = self.build_select_expression()
         rows = await self.database.fetch_all(expr)
-        return [self.model_cls.from_row(row, select_related=self._select_related) for row in rows]
+        return [
+            self.model_cls.from_row(row, select_related=self._select_related)
+            for row in rows
+        ]
 
     async def get(self, **kwargs):
         if kwargs:
@@ -261,8 +269,8 @@ class Model(typesystem.Schema, metaclass=ModelMetaclass):
 
         # Instantiate any child instances first.
         for related in select_related:
-            if '__' in related:
-                first_part, remainder = related.split('__', 1)
+            if "__" in related:
+                first_part, remainder = related.split("__", 1)
                 model_cls = cls.fields[first_part].to
                 item[first_part] = model_cls.from_row(row, select_related=[remainder])
             else:
@@ -278,7 +286,7 @@ class Model(typesystem.Schema, metaclass=ModelMetaclass):
 
     def __setattr__(self, key, value):
         if key in self.fields:
-            #  Setting a relationship to a raw pk value should set a
+            # Setting a relationship to a raw pk value should set a
             # fully-fledged relationship instance, with just the pk loaded.
             value = self.fields[key].expand_relationship(value)
         super().__setattr__(key, value)
