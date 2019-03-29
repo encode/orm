@@ -161,6 +161,11 @@ class QuerySet:
         expr = sqlalchemy.exists(expr).select()
         return await self.database.fetch_val(expr)
 
+    async def count(self) -> int:
+        expr = self.build_select_expression()
+        expr = sqlalchemy.func.count().select().select_from(expr)
+        return await self.database.fetch_val(expr)
+
     async def all(self, **kwargs):
         if kwargs:
             return await self.filter(**kwargs).all()
@@ -286,7 +291,7 @@ class Model(typesystem.Schema, metaclass=ModelMetaclass):
 
     def __setattr__(self, key, value):
         if key in self.fields:
-            #  Setting a relationship to a raw pk value should set a
+            # Setting a relationship to a raw pk value should set a
             # fully-fledged relationship instance, with just the pk loaded.
             value = self.fields[key].expand_relationship(value)
         super().__setattr__(key, value)

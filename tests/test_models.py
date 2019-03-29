@@ -145,3 +145,14 @@ async def test_model_exists():
         await User.objects.create(name="Tom")
         assert await User.objects.filter(name="Tom").exists() is True
         assert await User.objects.filter(name="Jane").exists() is False
+
+
+@async_adapter
+async def test_model_count():
+    async with database:
+        await User.objects.create(name="Tom")
+        await User.objects.create(name="Jane")
+        await User.objects.create(name="Lucy")
+
+        assert await User.objects.count() == 3
+        assert await User.objects.filter(name__icontains="T").count() == 1
