@@ -156,7 +156,7 @@ class QuerySet:
 
                 model_cls = self.model_cls
                 if related_parts:
-                    #  Add any implied select_related
+                    # Add any implied select_related
                     related_str = "__".join(related_parts)
                     if related_str not in select_related:
                         select_related.append(related_str)
@@ -201,6 +201,11 @@ class QuerySet:
             filter_clauses=self.filter_clauses,
             select_related=related,
         )
+
+    async def count(self) -> int:
+        expr = self.build_select_expression()
+        expr = sqlalchemy.func.count().select().select_from(expr)
+        return await self.database.fetch_val(expr)
 
     async def all(self, **kwargs):
         if kwargs:

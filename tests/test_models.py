@@ -156,6 +156,17 @@ async def test_model_filter():
 
 
 @async_adapter
+async def test_model_count():
+    async with database:
+        await User.objects.create(name="Tom")
+        await User.objects.create(name="Jane")
+        await User.objects.create(name="Lucy")
+
+        assert await User.objects.count() == 3
+        assert await User.objects.filter(name__icontains="T").count() == 1
+
+
+@async_adapter
 async def test_validate_unique():
     slug = "hello-world"
     async with database:
