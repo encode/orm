@@ -156,6 +156,11 @@ class QuerySet:
             select_related=related,
         )
 
+    async def exists(self) -> bool:
+        expr = self.build_select_expression()
+        expr = sqlalchemy.exists(expr).select()
+        return await self.database.fetch_val(expr)
+
     async def count(self) -> int:
         expr = self.build_select_expression()
         expr = sqlalchemy.func.count().select().select_from(expr)
