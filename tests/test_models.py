@@ -156,3 +156,13 @@ async def test_model_count():
 
         assert await User.objects.count() == 3
         assert await User.objects.filter(name__icontains="T").count() == 1
+
+
+@async_adapter
+async def test_model_limit():
+    async with database:
+        await User.objects.create(name="Tom")
+        await User.objects.create(name="Jane")
+        await User.objects.create(name="Lucy")
+
+        assert len(await User.objects.limit(2).all()) == 2

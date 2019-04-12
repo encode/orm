@@ -53,6 +53,7 @@ class QuerySet:
         self.model_cls = model_cls
         self.filter_clauses = [] if filter_clauses is None else filter_clauses
         self._select_related = [] if select_related is None else select_related
+        self.limit_count = None
 
     def __get__(self, instance, owner):
         return self.__class__(model_cls=owner)
@@ -86,6 +87,9 @@ class QuerySet:
             else:
                 clause = sqlalchemy.sql.and_(*self.filter_clauses)
             expr = expr.where(clause)
+
+        if self.limit_count:
+            expr = expr.limit(self.limit_count)
 
         return expr
 
@@ -160,6 +164,15 @@ class QuerySet:
         expr = self.build_select_expression()
         expr = sqlalchemy.exists(expr).select()
         return await self.database.fetch_val(expr)
+
+    def limit(self, rows_to_return: int):
+        new_query_set = self.__class__(
+            model_cls=self.model_cls,
+            filter_clauses=self.filter_clauses,
+            select_related=self._select_related,
+        )
+        new_query_set.limit_count = rows_to_return
+        return new_query_set
 
     async def count(self) -> int:
         expr = self.build_select_expression()
