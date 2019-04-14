@@ -139,17 +139,17 @@ async def test_model_filter():
         products = await Product.objects.all(name__icontains="T")
         assert len(products) == 2
 
+        # Test escaping % character from icontains, contains, and iexact
         await Product.objects.create(name="100%-Cotton", rating=3)
         await Product.objects.create(name="Cotton-100%-Egyptian", rating=3)
         await Product.objects.create(name="Cotton-100%", rating=3)
-        # Test escaping % character from icontains, contains, and iexact
         products = Product.objects.filter(name__iexact="100%-cotton")
         assert await products.count() == 1
 
-        products = Product.objects.filter(name__contains="100%")
+        products = Product.objects.filter(name__contains="%")
         assert await products.count() == 3
 
-        products = Product.objects.filter(name__icontains="100%")
+        products = Product.objects.filter(name__icontains="%")
         assert await products.count() == 3
 
 
