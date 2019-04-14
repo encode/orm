@@ -7,7 +7,8 @@ import sqlalchemy
 import databases
 import orm
 
-DATABASE_URL = "sqlite:///test.db"
+from tests.settings import DATABASE_URL
+
 database = databases.Database(DATABASE_URL, force_rollback=True)
 metadata = sqlalchemy.MetaData()
 
@@ -137,6 +138,19 @@ async def test_model_filter():
 
         products = await Product.objects.all(name__icontains="T")
         assert len(products) == 2
+
+        await Product.objects.create(name="100%-Cotton", rating=3)
+        await Product.objects.create(name="Cotton-100%-Egyptian", rating=3)
+        await Product.objects.create(name="Cotton-100%", rating=3)
+        # Test escaping % character from icontains, contains, and iexact
+        products = Product.objects.filter(name__iexact="100%-cotton")
+        assert await products.count() == 1
+
+        products = Product.objects.filter(name__contains="100%")
+        assert await products.count() == 3
+
+        products = Product.objects.filter(name__icontains="100%")
+        assert await products.count() == 3
 
 
 @async_adapter
