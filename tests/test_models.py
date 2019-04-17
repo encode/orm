@@ -166,3 +166,13 @@ async def test_model_limit():
         await User.objects.create(name="Lucy")
 
         assert len(await User.objects.limit(2).all()) == 2
+
+
+@async_adapter
+async def test_model_limit_with_filter():
+    async with database:
+        await User.objects.create(name="Tom")
+        await User.objects.create(name="Tom")
+        await User.objects.create(name="Tom")
+
+        assert len(await User.objects.limit(2).filter(name__iexact='Tom').all()) == 2
