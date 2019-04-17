@@ -49,9 +49,8 @@ class ModelMetaclass(SchemaMetaclass):
 
 
 class QuerySet:
+    ESCAPE_CHARACTERS = ['%', '_']
     def __init__(self, model_cls=None, filter_clauses=None, select_related=None, limit_count=None):
-        ESCAPE_CHARACTERS = ['%', '_']
-
         self.model_cls = model_cls
         self.filter_clauses = [] if filter_clauses is None else filter_clauses
         self._select_related = [] if select_related is None else select_related
@@ -178,13 +177,12 @@ class QuerySet:
         return await self.database.fetch_val(expr)
 
     def limit(self, rows_to_return: int):
-        new_query_set = self.__class__(
+        return self.__class__(
             model_cls=self.model_cls,
             filter_clauses=self.filter_clauses,
             select_related=self._select_related,
             limit_count=rows_to_return
         )
-        return new_query_set
 
     async def count(self) -> int:
         expr = self.build_select_expression()
