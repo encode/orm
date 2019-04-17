@@ -54,7 +54,7 @@ class QuerySet:
         self.model_cls = model_cls
         self.filter_clauses = [] if filter_clauses is None else filter_clauses
         self._select_related = [] if select_related is None else select_related
-        self.limit_count = None if limit_count is None else limit_count
+        self.limit_count = limit_count
 
     def __get__(self, instance, owner):
         return self.__class__(model_cls=owner)
