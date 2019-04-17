@@ -49,6 +49,8 @@ class ModelMetaclass(SchemaMetaclass):
 
 
 class QuerySet:
+    ESCAPE_CHARACTERS = ['%', '_']
+
     def __init__(self, model_cls=None, filter_clauses=None, select_related=None):
         self.model_cls = model_cls
         self.filter_clauses = [] if filter_clauses is None else filter_clauses
@@ -129,14 +131,22 @@ class QuerySet:
             # Map the operation code onto SQLAlchemy's ColumnElement
             # https://docs.sqlalchemy.org/en/latest/core/sqlelement.html#sqlalchemy.sql.expression.ColumnElement
             op_attr = FILTER_OPERATORS[op]
+            has_escaped_character = False
 
             if op in ["contains", "icontains"]:
-                value = "%" + value + "%"
+                has_escaped_character = any(c for c in self.ESCAPE_CHARACTERS
+                                            if c in value)
+                if has_escaped_character:
+                    # enable escape modifier
+                    for char in self.ESCAPE_CHARACTERS:
+                        value = value.replace(char, f'\\{char}')
+                value = f"%{value}%"
 
             if isinstance(value, Model):
                 value = value.pk
 
             clause = getattr(column, op_attr)(value)
+            clause.modifiers['escape'] = '\\' if has_escaped_character else None
             filter_clauses.append(clause)
 
         return self.__class__(
