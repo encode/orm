@@ -8,7 +8,9 @@ import sqlalchemy
 import databases
 import orm
 
-DATABASE_URL = "sqlite:///test.db"
+from tests.settings import DATABASE_URL
+
+
 database = databases.Database(DATABASE_URL, force_rollback=True)
 metadata = sqlalchemy.MetaData()
 
