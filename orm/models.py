@@ -176,12 +176,12 @@ class QuerySet:
         expr = sqlalchemy.exists(expr).select()
         return await self.database.fetch_val(expr)
 
-    def limit(self, rows_to_return: int):
+    def limit(self, limit_count: int):
         return self.__class__(
             model_cls=self.model_cls,
             filter_clauses=self.filter_clauses,
             select_related=self._select_related,
-            limit_count=rows_to_return
+            limit_count=limit_count
         )
 
     async def count(self) -> int:
