@@ -50,11 +50,11 @@ class ModelMetaclass(SchemaMetaclass):
 
 class QuerySet:
     ESCAPE_CHARACTERS = ['%', '_']
-
-    def __init__(self, model_cls=None, filter_clauses=None, select_related=None):
+    def __init__(self, model_cls=None, filter_clauses=None, select_related=None, limit_count=None):
         self.model_cls = model_cls
         self.filter_clauses = [] if filter_clauses is None else filter_clauses
         self._select_related = [] if select_related is None else select_related
+        self.limit_count = limit_count
 
     def __get__(self, instance, owner):
         return self.__class__(model_cls=owner)
@@ -88,6 +88,9 @@ class QuerySet:
             else:
                 clause = sqlalchemy.sql.and_(*self.filter_clauses)
             expr = expr.where(clause)
+
+        if self.limit_count:
+            expr = expr.limit(self.limit_count)
 
         return expr
 
@@ -153,6 +156,7 @@ class QuerySet:
             model_cls=self.model_cls,
             filter_clauses=filter_clauses,
             select_related=select_related,
+            limit_count=self.limit_count
         )
 
     def select_related(self, related):
@@ -164,12 +168,21 @@ class QuerySet:
             model_cls=self.model_cls,
             filter_clauses=self.filter_clauses,
             select_related=related,
+            limit_count=self.limit_count
         )
 
     async def exists(self) -> bool:
         expr = self.build_select_expression()
         expr = sqlalchemy.exists(expr).select()
         return await self.database.fetch_val(expr)
+
+    def limit(self, limit_count: int):
+        return self.__class__(
+            model_cls=self.model_cls,
+            filter_clauses=self.filter_clauses,
+            select_related=self._select_related,
+            limit_count=limit_count
+        )
 
     async def count(self) -> int:
         expr = self.build_select_expression()

@@ -117,6 +117,7 @@ fantasies = await Album.objects.create(name="Fantasies")
 await Track.objects.create(album=fantasies, title="Help I'm Alive", position=1)
 await Track.objects.create(album=fantasies, title="Sick Muse", position=2)
 
+
 # Fetch an instance, without loading a foreign key relationship on it.
 track = await Track.objects.get(title="The Bird")
 
@@ -140,6 +141,10 @@ assert len(tracks) == 2
 # Fetch instances, with a filter and operator across an FK relationship.
 tracks = Track.objects.filter(album__name__iexact="fantasies")
 assert len(tracks) == 2
+
+# Limit a query
+tracks = await Track.objects.limit(1).all()
+assert len(tracks) == 1
 ```
 
 ## Data types
