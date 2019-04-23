@@ -27,5 +27,3 @@ script:
 
 after_script:
     - codecov
- TEST_DATABASE_URLS="sqlite:///test.db"
-export TEST_DATABASE_URLS="postgresql://localhost/test_database"
