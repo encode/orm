@@ -3,6 +3,8 @@ databases[mysql]
 databases[sqlite]
 typesystem
 
+pymysql
+
 # Testing
 autoflake
 black
@@ -11,3 +13,4 @@ isort
 mypy
 pytest
 pytest-cov
+
