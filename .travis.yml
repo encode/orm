@@ -11,6 +11,12 @@ python:
 install:
     - pip install -U -r requirements.txt
 
+services:
+  - postgresql
+
+before_script:
+  - psql -c 'create database travis_ci_test;' -U postgres
+
 script:
     - scripts/test
 
