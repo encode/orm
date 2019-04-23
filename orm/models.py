@@ -186,7 +186,7 @@ class QuerySet:
 
     async def count(self) -> int:
         expr = self.build_select_expression()
-        expr = sqlalchemy.func.count().select().select_from(expr)
+        expr = sqlalchemy.func.count().select().select_from(sqlalchemy.sql.expression.alias(expr))
         return await self.database.fetch_val(expr)
 
     async def all(self, **kwargs):
