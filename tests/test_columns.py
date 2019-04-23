@@ -1,17 +1,18 @@
 import asyncio
 import datetime
 import functools
+import os
 
 import pytest
 import sqlalchemy
 
-import databases
+from databases import Database, DatabaseURL
 import orm
 
-from tests.settings import DATABASE_URL
+assert "TEST_DATABASE_URLS" in os.environ, "TEST_DATABASE_URLS is not set."
 
+DATABASE_URLS = [url.strip() for url in os.environ["TEST_DATABASE_URLS"].split(",")]
 
-database = databases.Database(DATABASE_URL, force_rollback=True)
 metadata = sqlalchemy.MetaData()
 
 
@@ -22,7 +23,7 @@ def time():
 class Example(orm.Model):
     __tablename__ = "example"
     __metadata__ = metadata
-    __database__ = database
+    # __database__ = database
 
     id = orm.Integer(primary_key=True)
     created = orm.DateTime(default=datetime.datetime.now)
@@ -35,10 +36,24 @@ class Example(orm.Model):
 
 @pytest.fixture(autouse=True, scope="module")
 def create_test_database():
-    engine = sqlalchemy.create_engine(DATABASE_URL)
-    metadata.create_all(engine)
+    # Create test databases
+    for url in DATABASE_URLS:
+        database_url = DatabaseURL(url)
+        if database_url.dialect == "mysql":
+            url = str(database_url.replace(driver="pymysql"))
+        engine = sqlalchemy.create_engine(url)
+        metadata.create_all(engine)
+
+    # Run the test suite
     yield
-    metadata.drop_all(engine)
+
+    # Drop test databases
+    for url in DATABASE_URLS:
+        database_url = DatabaseURL(url)
+        if database_url.dialect == "mysql":
+            url = str(database_url.replace(driver="pymysql"))
+        engine = sqlalchemy.create_engine(url)
+        metadata.drop_all(engine)
 
 
 def async_adapter(wrapped_func):
@@ -55,9 +70,11 @@ def async_adapter(wrapped_func):
     return run_sync
 
 
+@pytest.mark.parametrize("database_url", DATABASE_URLS)
 @async_adapter
 async def test_model_crud():
-    async with database:
+    async with Database(database_url, force_rollback=True) as database:
+        Example.__database__ = database
         await Example.objects.create()
 
         example = await Example.objects.get()

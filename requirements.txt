@@ -1,4 +1,6 @@
 databases[postgresql]
+databases[mysql]
+databases[sqlite]
 typesystem
 
 # Testing

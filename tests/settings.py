@@ -1,1 +1,1 @@
-DATABASE_URL = "postgresql://localhost/travis_ci_test"
+DATABASE_URL = "postgresql://localhost/test_database"
