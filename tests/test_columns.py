@@ -72,7 +72,7 @@ def async_adapter(wrapped_func):
 
 @pytest.mark.parametrize("database_url", DATABASE_URLS)
 @async_adapter
-async def test_model_crud():
+async def test_model_crud(database_url):
     async with Database(database_url, force_rollback=True) as database:
         Example.__database__ = database
         await Example.objects.create()
