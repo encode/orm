@@ -23,7 +23,6 @@ def time():
 class Example(orm.Model):
     __tablename__ = "example"
     __metadata__ = metadata
-    # __database__ = database
 
     id = orm.Integer(primary_key=True)
     created = orm.DateTime(default=datetime.datetime.now)

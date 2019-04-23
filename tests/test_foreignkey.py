@@ -1,22 +1,23 @@
 import asyncio
 import functools
+import os
 
 import pytest
 import sqlalchemy
 
-import databases
+from databases import Database, DatabaseURL
 import orm
 
-from tests.settings import DATABASE_URL
+assert "TEST_DATABASE_URLS" in os.environ, "TEST_DATABASE_URLS is not set."
 
-database = databases.Database(DATABASE_URL, force_rollback=True)
+DATABASE_URLS = [url.strip() for url in os.environ["TEST_DATABASE_URLS"].split(",")]
+
 metadata = sqlalchemy.MetaData()
 
 
 class Album(orm.Model):
     __tablename__ = "album"
     __metadata__ = metadata
-    __database__ = database
 
     id = orm.Integer(primary_key=True)
     name = orm.String(max_length=100)
@@ -25,7 +26,6 @@ class Album(orm.Model):
 class Track(orm.Model):
     __tablename__ = "track"
     __metadata__ = metadata
-    __database__ = database
 
     id = orm.Integer(primary_key=True)
     album = orm.ForeignKey(Album)
@@ -36,7 +36,6 @@ class Track(orm.Model):
 class Organisation(orm.Model):
     __tablename__ = "org"
     __metadata__ = metadata
-    __database__ = database
 
     id = orm.Integer(primary_key=True)
     ident = orm.String(max_length=100)
@@ -45,7 +44,6 @@ class Organisation(orm.Model):
 class Team(orm.Model):
     __tablename__ = "team"
     __metadata__ = metadata
-    __database__ = database
 
     id = orm.Integer(primary_key=True)
     org = orm.ForeignKey(Organisation)
@@ -55,19 +53,33 @@ class Team(orm.Model):
 class Member(orm.Model):
     __tablename__ = "member"
     __metadata__ = metadata
-    __database__ = database
 
     id = orm.Integer(primary_key=True)
     team = orm.ForeignKey(Team)
     email = orm.String(max_length=100)
 
+models = [Album, Track, Organisation, Team, Member]
 
 @pytest.fixture(autouse=True, scope="module")
 def create_test_database():
-    engine = sqlalchemy.create_engine(DATABASE_URL)
-    metadata.create_all(engine)
+    # Create test databases
+    for url in DATABASE_URLS:
+        database_url = DatabaseURL(url)
+        if database_url.dialect == "mysql":
+            url = str(database_url.replace(driver="pymysql"))
+        engine = sqlalchemy.create_engine(url)
+        metadata.create_all(engine)
+
+    # Run the test suite
     yield
-    metadata.drop_all(engine)
+
+    # Drop test databases
+    for url in DATABASE_URLS:
+        database_url = DatabaseURL(url)
+        if database_url.dialect == "mysql":
+            url = str(database_url.replace(driver="pymysql"))
+        engine = sqlalchemy.create_engine(url)
+        metadata.drop_all(engine)
 
 
 def async_adapter(wrapped_func):
@@ -84,9 +96,12 @@ def async_adapter(wrapped_func):
     return run_sync
 
 
+@pytest.mark.parametrize("database_url", DATABASE_URLS)
 @async_adapter
-async def test_model_crud():
-    async with database:
+async def test_model_crud(database_url):
+    async with Database(database_url, force_rollback=True) as database:
+        for model in models:
+            model.__database__ = database
         album = await Album.objects.create(name="Malibu")
         await Track.objects.create(album=album, title="The Bird", position=1)
         await Track.objects.create(album=album, title="Heart don't stand a chance", position=2)
@@ -99,9 +114,12 @@ async def test_model_crud():
         assert track.album.name == "Malibu"
 
 
+@pytest.mark.parametrize("database_url", DATABASE_URLS)
 @async_adapter
-async def test_select_related():
-    async with database:
+async def test_select_related(database_url):
+    async with Database(database_url, force_rollback=True) as database:
+        for model in models:
+            model.__database__ = database
         album = await Album.objects.create(name="Malibu")
         await Track.objects.create(album=album, title="The Bird", position=1)
         await Track.objects.create(album=album, title="Heart don't stand a chance", position=2)
@@ -119,9 +137,12 @@ async def test_select_related():
         assert len(tracks) == 6
 
 
+@pytest.mark.parametrize("database_url", DATABASE_URLS)
 @async_adapter
-async def test_fk_filter():
-    async with database:
+async def test_fk_filter(database_url):
+    async with Database(database_url, force_rollback=True) as database:
+        for model in models:
+            model.__database__ = database
         malibu = await Album.objects.create(name="Malibu")
         await Track.objects.create(album=malibu, title="The Bird", position=1)
         await Track.objects.create(album=malibu, title="Heart don't stand a chance", position=2)
@@ -153,9 +174,12 @@ async def test_fk_filter():
             assert track.album.name == "Malibu"
 
 
+@pytest.mark.parametrize("database_url", DATABASE_URLS)
 @async_adapter
-async def test_multiple_fk():
-    async with database:
+async def test_multiple_fk(database_url):
+    async with Database(database_url, force_rollback=True) as database:
+        for model in models:
+            model.__database__ = database
         acme = await Organisation.objects.create(ident="ACME Ltd")
         red_team = await Team.objects.create(org=acme, name="Red Team")
         blue_team = await Team.objects.create(org=acme, name="Blue Team")
