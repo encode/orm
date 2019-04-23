@@ -5,3 +5,5 @@
 *.egg-info/
 htmlcov/
 venv/
+.venv/
+.idea/
