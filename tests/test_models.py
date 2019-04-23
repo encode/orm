@@ -33,7 +33,7 @@ class Product(orm.Model):
     in_stock = orm.Boolean(default=False)
 
 
-models = [User, product]
+models = [User, Product]
 
 
 @pytest.fixture(autouse=True, scope="module")
