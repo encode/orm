@@ -5,8 +5,8 @@ import os
 import pytest
 import sqlalchemy
 
-from databases import Database, DatabaseURL
 import orm
+from databases import Database, DatabaseURL
 
 assert "TEST_DATABASE_URLS" in os.environ, "TEST_DATABASE_URLS is not set."
 
@@ -59,6 +59,7 @@ class Member(orm.Model):
     email = orm.String(max_length=100)
 
 models = [Album, Track, Organisation, Team, Member]
+
 
 @pytest.fixture(autouse=True, scope="module")
 def create_test_database():

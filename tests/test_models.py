@@ -1,22 +1,23 @@
 import asyncio
 import functools
+import os
 
 import pytest
 import sqlalchemy
 
-import databases
 import orm
+from databases import Database, DatabaseURL
 
-from tests.settings import DATABASE_URL
+assert "TEST_DATABASE_URLS" in os.environ, "TEST_DATABASE_URLS is not set."
 
-database = databases.Database(DATABASE_URL, force_rollback=True)
+DATABASE_URLS = [url.strip() for url in os.environ["TEST_DATABASE_URLS"].split(",")]
+
 metadata = sqlalchemy.MetaData()
 
 
 class User(orm.Model):
     __tablename__ = "users"
     __metadata__ = metadata
-    __database__ = database
 
     id = orm.Integer(primary_key=True)
     name = orm.String(max_length=100)
@@ -25,7 +26,6 @@ class User(orm.Model):
 class Product(orm.Model):
     __tablename__ = "product"
     __metadata__ = metadata
-    __database__ = database
 
     id = orm.Integer(primary_key=True)
     name = orm.String(max_length=100)
@@ -33,12 +33,29 @@ class Product(orm.Model):
     in_stock = orm.Boolean(default=False)
 
 
+models = [User, product]
+
+
 @pytest.fixture(autouse=True, scope="module")
 def create_test_database():
-    engine = sqlalchemy.create_engine(DATABASE_URL)
-    metadata.create_all(engine)
+    # Create test databases
+    for url in DATABASE_URLS:
+        database_url = DatabaseURL(url)
+        if database_url.dialect == "mysql":
+            url = str(database_url.replace(driver="pymysql"))
+        engine = sqlalchemy.create_engine(url)
+        metadata.create_all(engine)
+
+    # Run the test suite
     yield
-    metadata.drop_all(engine)
+
+    # Drop test databases
+    for url in DATABASE_URLS:
+        database_url = DatabaseURL(url)
+        if database_url.dialect == "mysql":
+            url = str(database_url.replace(driver="pymysql"))
+        engine = sqlalchemy.create_engine(url)
+        metadata.drop_all(engine)
 
 
 def async_adapter(wrapped_func):
@@ -70,9 +87,12 @@ def test_model_pk():
     assert user.id == 1
 
 
+@pytest.mark.parametrize("database_url", DATABASE_URLS)
 @async_adapter
-async def test_model_crud():
-    async with database:
+async def test_model_crud(database_url):
+    async with Database(database_url, force_rollback=True) as database:
+        for model in models:
+            model.__database__ = database
         users = await User.objects.all()
         assert users == []
 
@@ -96,9 +116,12 @@ async def test_model_crud():
         assert users == []
 
 
+@pytest.mark.parametrize("database_url", DATABASE_URLS)
 @async_adapter
-async def test_model_get():
-    async with database:
+async def test_model_get(database_url):
+    async with Database(database_url, force_rollback=True) as database:
+        for model in models:
+            model.__database__ = database
         with pytest.raises(orm.NoMatch):
             await User.objects.get()
 
@@ -111,9 +134,12 @@ async def test_model_get():
             await User.objects.get()
 
 
+@pytest.mark.parametrize("database_url", DATABASE_URLS)
 @async_adapter
-async def test_model_filter():
-    async with database:
+async def test_model_filter(database_url):
+    async with Database(database_url, force_rollback=True) as database:
+        for model in models:
+            model.__database__ = database
         await User.objects.create(name="Tom")
         await User.objects.create(name="Jane")
         await User.objects.create(name="Lucy")
@@ -153,17 +179,23 @@ async def test_model_filter():
         assert await products.count() == 3
 
 
+@pytest.mark.parametrize("database_url", DATABASE_URLS)
 @async_adapter
-async def test_model_exists():
-    async with database:
+async def test_model_exists(database_url):
+    async with Database(database_url, force_rollback=True) as database:
+        for model in models:
+            model.__database__ = database
         await User.objects.create(name="Tom")
         assert await User.objects.filter(name="Tom").exists() is True
         assert await User.objects.filter(name="Jane").exists() is False
 
 
+@pytest.mark.parametrize("database_url", DATABASE_URLS)
 @async_adapter
-async def test_model_count():
-    async with database:
+async def test_model_count(database_url):
+    async with Database(database_url, force_rollback=True) as database:
+        for model in models:
+            model.__database__ = database
         await User.objects.create(name="Tom")
         await User.objects.create(name="Jane")
         await User.objects.create(name="Lucy")
@@ -172,9 +204,12 @@ async def test_model_count():
         assert await User.objects.filter(name__icontains="T").count() == 1
 
 
+@pytest.mark.parametrize("database_url", DATABASE_URLS)
 @async_adapter
-async def test_model_limit():
-    async with database:
+async def test_model_limit(database_url):
+    async with Database(database_url, force_rollback=True) as database:
+        for model in models:
+            model.__database__ = database
         await User.objects.create(name="Tom")
         await User.objects.create(name="Jane")
         await User.objects.create(name="Lucy")
@@ -182,9 +217,12 @@ async def test_model_limit():
         assert len(await User.objects.limit(2).all()) == 2
 
 
+@pytest.mark.parametrize("database_url", DATABASE_URLS)
 @async_adapter
-async def test_model_limit_with_filter():
-    async with database:
+async def test_model_limit_with_filter(database_url):
+    async with Database(database_url, force_rollback=True) as database:
+        for model in models:
+            model.__database__ = database
         await User.objects.create(name="Tom")
         await User.objects.create(name="Tom")
         await User.objects.create(name="Tom")
