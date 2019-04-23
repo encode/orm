@@ -3,6 +3,11 @@ databases[mysql]
 databases[sqlite]
 typesystem
 
+# Async database drivers
+aiomysql
+aiosqlite
+asyncpg
+
 pymysql
 
 # Testing
