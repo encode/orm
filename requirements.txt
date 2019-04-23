@@ -1,4 +1,4 @@
-databases[sqlite]
+databases[postgresql]
 typesystem
 
 # Testing
