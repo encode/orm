@@ -216,11 +216,16 @@ class QuerySet:
     async def create(self, **kwargs):
         # Validate the keyword arguments.
         fields = self.model_cls.fields
+        pkname = self.model_cls.__pkname__
+        pk = fields[pkname]
         required = [key for key, value in fields.items() if not value.has_default()]
         validator = typesystem.Object(
             properties=fields, required=required, additional_properties=False
         )
         kwargs = validator.validate(kwargs)
+        # remove pk with NULL value to avoid constraint violation in postgres
+        if pk.allow_null and pk.primary_key:
+            del kwargs[pkname]
 
         # Build the insert expression.
         expr = self.table.insert()
