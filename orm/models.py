@@ -50,11 +50,18 @@ class ModelMetaclass(SchemaMetaclass):
 
 class QuerySet:
     ESCAPE_CHARACTERS = ['%', '_']
-    def __init__(self, model_cls=None, filter_clauses=None, select_related=None, limit_count=None):
+    _limit = None
+
+    def __init__(self, model_cls=None, filter_clauses=None, select_related=None):
         self.model_cls = model_cls
         self.filter_clauses = [] if filter_clauses is None else filter_clauses
         self._select_related = [] if select_related is None else select_related
-        self.limit_count = limit_count
+
+    @property
+    def _select_args(self):
+        return {
+            'limit': self._limit
+        }
 
     def __get__(self, instance, owner):
         return self.__class__(model_cls=owner)
@@ -79,7 +86,7 @@ class QuerySet:
                 select_from = sqlalchemy.sql.join(select_from, model_cls.__table__)
                 tables.append(model_cls.__table__)
 
-        expr = sqlalchemy.sql.select(tables)
+        expr = sqlalchemy.sql.select(tables, **self._select_args)
         expr = expr.select_from(select_from)
 
         if self.filter_clauses:
@@ -88,9 +95,6 @@ class QuerySet:
             else:
                 clause = sqlalchemy.sql.and_(*self.filter_clauses)
             expr = expr.where(clause)
-
-        if self.limit_count:
-            expr = expr.limit(self.limit_count)
 
         return expr
 
@@ -152,37 +156,26 @@ class QuerySet:
             clause.modifiers['escape'] = '\\' if has_escaped_character else None
             filter_clauses.append(clause)
 
-        return self.__class__(
-            model_cls=self.model_cls,
-            filter_clauses=filter_clauses,
-            select_related=select_related,
-            limit_count=self.limit_count
-        )
+        self.filter_clauses = filter_clauses
+        self._select_related = select_related
+        return self
 
     def select_related(self, related):
         if not isinstance(related, (list, tuple)):
             related = [related]
 
         related = list(self._select_related) + related
-        return self.__class__(
-            model_cls=self.model_cls,
-            filter_clauses=self.filter_clauses,
-            select_related=related,
-            limit_count=self.limit_count
-        )
+        self._select_related = related
+        return self
 
     async def exists(self) -> bool:
         expr = self.build_select_expression()
         expr = sqlalchemy.exists(expr).select()
         return await self.database.fetch_val(expr)
 
-    def limit(self, limit_count: int):
-        return self.__class__(
-            model_cls=self.model_cls,
-            filter_clauses=self.filter_clauses,
-            select_related=self._select_related,
-            limit_count=limit_count
-        )
+    def limit(self, limit: int):
+        self._limit = limit
+        return self
 
     async def count(self) -> int:
         expr = self.build_select_expression()
