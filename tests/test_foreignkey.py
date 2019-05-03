@@ -172,3 +172,15 @@ async def test_multiple_fk():
         assert len(members) == 4
         for member in members:
             assert member.team.org.ident == "ACME Ltd"
+
+
+@async_adapter
+async def test_delete_with_fk_filter():
+    fantasies = await Album.objects.create(name="Fantasies")
+    await Track.objects.create(album=fantasies, title="Help I'm Alive", position=1)
+    await Track.objects.create(album=fantasies, title="Sick Muse", position=2)
+    await Track.objects.create(album=fantasies, title="Satellite Mind", position=3)
+
+    assert await Track.objects.filter(album=fantasies).count() == 3
+    await Track.objects.filter(album__name="Fantasies").delete()
+    assert await Track.objects.filter(album=fantasies).count() == 0

@@ -190,3 +190,40 @@ async def test_model_limit_with_filter():
         await User.objects.create(name="Tom")
 
         assert len(await User.objects.limit(2).filter(name__iexact='Tom').all()) == 2
+
+@async_adapter
+async def test_model_delete():
+    async with database:
+        await User.objects.create(name="Tom")
+        await User.objects.create(name="Tom")
+        await User.objects.create(name="Tom")
+
+        # It must be filtered before deletion
+        with pytest.raises(AssertionError):
+            await User.objects.delete()
+        assert len(await User.objects.all()) == 3
+
+        # Can't use delete with offset and limit
+        with pytest.raises(AssertionError):
+            await User.objects.limit(2).delete()
+        assert len(await User.objects.all()) == 3
+
+
+@async_adapter
+async def test_model_delete_with_filter():
+    async with database:
+        await User.objects.create(name="Tom")
+        await User.objects.create(name="Tom")
+        await User.objects.create(name="Jany")
+        await User.objects.create(name="Lucy")
+
+        await User.objects.filter(name="Tom").delete()
+        assert await User.objects.count() == 2
+        await User.objects.delete(name="Jany")
+        assert await User.objects.count() == 1
+
+        await Product.objects.create(name="T-Shirt", rating=5)
+        await Product.objects.create(name="Dress", rating=3)
+        await Product.objects.create(name="Coat", rating=3)
+        await Product.objects.filter(name="Dress", rating=3).delete()
+        assert await Product.objects.count() == 2
