@@ -98,6 +98,10 @@ class QuerySet:
         filter_clauses = self.filter_clauses
         select_related = list(self._select_related)
 
+        if kwargs.get("pk"):
+            pk_name = self.model_cls.__pkname__
+            kwargs[pk_name] = kwargs.pop("pk")
+
         for key, value in kwargs.items():
             if "__" in key:
                 parts = key.split("__")
