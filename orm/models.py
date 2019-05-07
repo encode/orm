@@ -222,6 +222,13 @@ class QuerySet:
         )
         kwargs = validator.validate(kwargs)
 
+        # Remove fields that are allowed to be NULL or auto incremented
+        kwargs = {
+            key: value
+            for key, value in kwargs.items()
+            if not (fields[key].allow_null and value is None)
+        }
+
         # Build the insert expression.
         expr = self.table.insert()
         expr = expr.values(**kwargs)
