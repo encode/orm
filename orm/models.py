@@ -222,12 +222,11 @@ class QuerySet:
         )
         kwargs = validator.validate(kwargs)
 
-        # Remove fields that are allowed to be NULL or auto incremented
-        kwargs = {
-            key: value
-            for key, value in kwargs.items()
-            if not (fields[key].allow_null and value is None)
-        }
+        # Remove primary key when None to prevent not null constraint in postgresql.
+        pkname = self.model_cls.__pkname__
+        pk = self.model_cls.fields[pkname]
+        if kwargs[pkname] is None and pk.allow_null:
+            del kwargs[pkname]
 
         # Build the insert expression.
         expr = self.table.insert()
