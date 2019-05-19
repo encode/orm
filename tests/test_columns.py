@@ -21,8 +21,8 @@ def time():
 
 
 class StatusEnum(Enum):
-    draft = "Draft"
-    released = "Released"
+    DRAFT = "Draft"
+    RELEASED = "Released"
 
 
 class Example(orm.Model):
@@ -37,7 +37,7 @@ class Example(orm.Model):
     description = orm.Text(allow_blank=True)
     value = orm.Float(allow_null=True)
     data = orm.JSON(default={})
-    status = orm.Enum(StatusEnum, default=StatusEnum.draft)
+    status = orm.Enum(StatusEnum, default=StatusEnum.DRAFT)
 
 
 @pytest.fixture(autouse=True, scope="module")
@@ -73,10 +73,10 @@ async def test_model_crud():
         assert example.description == ""
         assert example.value is None
         assert example.data == {}
-        assert example.status == StatusEnum.draft
+        assert example.status == StatusEnum.DRAFT
 
-        await example.update(data={"foo": 123}, value=123.456, status=StatusEnum.released)
+        await example.update(data={"foo": 123}, value=123.456, status=StatusEnum.RELEASED)
         example = await Example.objects.get()
         assert example.value == 123.456
         assert example.data == {"foo": 123}
-        assert example.status == StatusEnum.released
+        assert example.status == StatusEnum.RELEASED
