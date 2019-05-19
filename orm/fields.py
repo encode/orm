@@ -112,3 +112,12 @@ class ForeignKey(ModelField, typesystem.Field):
         if isinstance(value, self.to):
             return value
         return self.to({self.to.__pkname__: value})
+
+
+class Enum(ModelField, typesystem.Any):
+    def __init__(self, enum, **kwargs):
+        super().__init__(**kwargs)
+        self.enum = enum
+
+    def get_column_type(self):
+        return sqlalchemy.Enum(self.enum)

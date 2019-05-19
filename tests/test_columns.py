@@ -1,6 +1,7 @@
 import asyncio
 import datetime
 import functools
+from enum import Enum
 
 import pytest
 import sqlalchemy
@@ -19,6 +20,11 @@ def time():
     return datetime.datetime.now().time()
 
 
+class StatusEnum(Enum):
+    draft = "Draft"
+    released = "Released"
+
+
 class Example(orm.Model):
     __tablename__ = "example"
     __metadata__ = metadata
@@ -31,6 +37,7 @@ class Example(orm.Model):
     description = orm.Text(allow_blank=True)
     value = orm.Float(allow_null=True)
     data = orm.JSON(default={})
+    status = orm.Enum(StatusEnum, default=StatusEnum.draft)
 
 
 @pytest.fixture(autouse=True, scope="module")
@@ -63,11 +70,13 @@ async def test_model_crud():
         example = await Example.objects.get()
         assert example.created.year == datetime.datetime.now().year
         assert example.created_day == datetime.date.today()
-        assert example.description == ''
+        assert example.description == ""
         assert example.value is None
         assert example.data == {}
+        assert example.status == StatusEnum.draft
 
-        await example.update(data={"foo": 123}, value=123.456)
+        await example.update(data={"foo": 123}, value=123.456, status=StatusEnum.released)
         example = await Example.objects.get()
         assert example.value == 123.456
         assert example.data == {"foo": 123}
+        assert example.status == StatusEnum.released
