@@ -49,10 +49,12 @@ class ModelMetaclass(SchemaMetaclass):
 
 
 class QuerySet:
-    def __init__(self, model_cls=None, filter_clauses=None, select_related=None):
+    ESCAPE_CHARACTERS = ['%', '_']
+    def __init__(self, model_cls=None, filter_clauses=None, select_related=None, limit_count=None):
         self.model_cls = model_cls
         self.filter_clauses = [] if filter_clauses is None else filter_clauses
         self._select_related = [] if select_related is None else select_related
+        self.limit_count = limit_count
 
     def __get__(self, instance, owner):
         return self.__class__(model_cls=owner)
@@ -87,6 +89,9 @@ class QuerySet:
                 clause = sqlalchemy.sql.and_(*self.filter_clauses)
             expr = expr.where(clause)
 
+        if self.limit_count:
+            expr = expr.limit(self.limit_count)
+
         return expr
 
     def filter(self, **kwargs):
@@ -110,13 +115,13 @@ class QuerySet:
 
                 model_cls = self.model_cls
                 if related_parts:
-                    # Add any implied select_related
+                    # Add any implied select_related
                     related_str = "__".join(related_parts)
                     if related_str not in select_related:
                         select_related.append(related_str)
 
                     # Walk the relationships to the actual model class
-                    # against which the comparison is being made.
+                    # against which the comparison is being made.
                     for part in related_parts:
                         model_cls = model_cls.fields[part].to
 
@@ -129,20 +134,29 @@ class QuerySet:
             # Map the operation code onto SQLAlchemy's ColumnElement
             # https://docs.sqlalchemy.org/en/latest/core/sqlelement.html#sqlalchemy.sql.expression.ColumnElement
             op_attr = FILTER_OPERATORS[op]
+            has_escaped_character = False
 
             if op in ["contains", "icontains"]:
-                value = "%" + value + "%"
+                has_escaped_character = any(c for c in self.ESCAPE_CHARACTERS
+                                            if c in value)
+                if has_escaped_character:
+                    # enable escape modifier
+                    for char in self.ESCAPE_CHARACTERS:
+                        value = value.replace(char, f'\\{char}')
+                value = f"%{value}%"
 
             if isinstance(value, Model):
                 value = value.pk
 
             clause = getattr(column, op_attr)(value)
+            clause.modifiers['escape'] = '\\' if has_escaped_character else None
             filter_clauses.append(clause)
 
         return self.__class__(
             model_cls=self.model_cls,
             filter_clauses=filter_clauses,
             select_related=select_related,
+            limit_count=self.limit_count
         )
 
     def select_related(self, related):
@@ -154,7 +168,26 @@ class QuerySet:
             model_cls=self.model_cls,
             filter_clauses=self.filter_clauses,
             select_related=related,
+            limit_count=self.limit_count
         )
+
+    async def exists(self) -> bool:
+        expr = self.build_select_expression()
+        expr = sqlalchemy.exists(expr).select()
+        return await self.database.fetch_val(expr)
+
+    def limit(self, limit_count: int):
+        return self.__class__(
+            model_cls=self.model_cls,
+            filter_clauses=self.filter_clauses,
+            select_related=self._select_related,
+            limit_count=limit_count
+        )
+
+    async def count(self) -> int:
+        expr = self.build_select_expression()
+        expr = sqlalchemy.func.count().select().select_from(expr)
+        return await self.database.fetch_val(expr)
 
     async def all(self, **kwargs):
         if kwargs:
@@ -162,7 +195,10 @@ class QuerySet:
 
         expr = self.build_select_expression()
         rows = await self.database.fetch_all(expr)
-        return [self.model_cls.from_row(row, select_related=self._select_related) for row in rows]
+        return [
+            self.model_cls.from_row(row, select_related=self._select_related)
+            for row in rows
+        ]
 
     async def get(self, **kwargs):
         if kwargs:
@@ -261,8 +297,8 @@ class Model(typesystem.Schema, metaclass=ModelMetaclass):
 
         # Instantiate any child instances first.
         for related in select_related:
-            if '__' in related:
-                first_part, remainder = related.split('__', 1)
+            if "__" in related:
+                first_part, remainder = related.split("__", 1)
                 model_cls = cls.fields[first_part].to
                 item[first_part] = model_cls.from_row(row, select_related=[remainder])
             else:
@@ -278,7 +314,7 @@ class Model(typesystem.Schema, metaclass=ModelMetaclass):
 
     def __setattr__(self, key, value):
         if key in self.fields:
-            #  Setting a relationship to a raw pk value should set a
+            # Setting a relationship to a raw pk value should set a
             # fully-fledged relationship instance, with just the pk loaded.
             value = self.fields[key].expand_relationship(value)
         super().__setattr__(key, value)

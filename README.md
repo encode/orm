@@ -22,6 +22,8 @@ MySQL, and SQLite. ORM is built with:
 Because ORM is built on SQLAlchemy core, you can use Alembic to provide
 database migrations.
 
+**ORM is still under development: We recommend pinning any dependencies with `orm~=0.1`**
+
 **Note**: Use `ipython` to try this from the console, since it supports `await`.
 
 ```python
@@ -115,6 +117,7 @@ fantasies = await Album.objects.create(name="Fantasies")
 await Track.objects.create(album=fantasies, title="Help I'm Alive", position=1)
 await Track.objects.create(album=fantasies, title="Sick Muse", position=2)
 
+
 # Fetch an instance, without loading a foreign key relationship on it.
 track = await Track.objects.get(title="The Bird")
 
@@ -138,6 +141,10 @@ assert len(tracks) == 2
 # Fetch instances, with a filter and operator across an FK relationship.
 tracks = Track.objects.filter(album__name__iexact="fantasies")
 assert len(tracks) == 2
+
+# Limit a query
+tracks = await Track.objects.limit(1).all()
+assert len(tracks) == 1
 ```
 
 ## Data types

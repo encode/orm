@@ -7,7 +7,8 @@ import sqlalchemy
 import databases
 import orm
 
-DATABASE_URL = "sqlite:///test.db"
+from tests.settings import DATABASE_URL
+
 database = databases.Database(DATABASE_URL, force_rollback=True)
 metadata = sqlalchemy.MetaData()
 
@@ -137,3 +138,55 @@ async def test_model_filter():
 
         products = await Product.objects.all(name__icontains="T")
         assert len(products) == 2
+
+        # Test escaping % character from icontains, contains, and iexact
+        await Product.objects.create(name="100%-Cotton", rating=3)
+        await Product.objects.create(name="Cotton-100%-Egyptian", rating=3)
+        await Product.objects.create(name="Cotton-100%", rating=3)
+        products = Product.objects.filter(name__iexact="100%-cotton")
+        assert await products.count() == 1
+
+        products = Product.objects.filter(name__contains="%")
+        assert await products.count() == 3
+
+        products = Product.objects.filter(name__icontains="%")
+        assert await products.count() == 3
+
+
+@async_adapter
+async def test_model_exists():
+    async with database:
+        await User.objects.create(name="Tom")
+        assert await User.objects.filter(name="Tom").exists() is True
+        assert await User.objects.filter(name="Jane").exists() is False
+
+
+@async_adapter
+async def test_model_count():
+    async with database:
+        await User.objects.create(name="Tom")
+        await User.objects.create(name="Jane")
+        await User.objects.create(name="Lucy")
+
+        assert await User.objects.count() == 3
+        assert await User.objects.filter(name__icontains="T").count() == 1
+
+
+@async_adapter
+async def test_model_limit():
+    async with database:
+        await User.objects.create(name="Tom")
+        await User.objects.create(name="Jane")
+        await User.objects.create(name="Lucy")
+
+        assert len(await User.objects.limit(2).all()) == 2
+
+
+@async_adapter
+async def test_model_limit_with_filter():
+    async with database:
+        await User.objects.create(name="Tom")
+        await User.objects.create(name="Tom")
+        await User.objects.create(name="Tom")
+
+        assert len(await User.objects.limit(2).filter(name__iexact='Tom').all()) == 2
