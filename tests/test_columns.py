@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import decimal
 import functools
 
 import pytest
@@ -13,6 +14,7 @@ from tests.settings import DATABASE_URL
 
 database = databases.Database(DATABASE_URL, force_rollback=True)
 metadata = sqlalchemy.MetaData()
+decimal.getcontext().prec = 8
 
 
 def time():
@@ -30,6 +32,7 @@ class Example(orm.Model):
     created_time = orm.Time(default=time)
     description = orm.Text(allow_blank=True)
     value = orm.Float(allow_null=True)
+    price = orm.Decimal(allow_null=True, scale=8, precision=18)
     data = orm.JSON(default={})
 
 
@@ -63,11 +66,12 @@ async def test_model_crud():
         example = await Example.objects.get()
         assert example.created.year == datetime.datetime.now().year
         assert example.created_day == datetime.date.today()
-        assert example.description == ''
+        assert example.description == ""
         assert example.value is None
+        assert example.price is None
         assert example.data == {}
-
-        await example.update(data={"foo": 123}, value=123.456)
+        await example.update(data={"foo": 123}, value=123.456, price=decimal.getcontext().create_decimal(0.12345678))
         example = await Example.objects.get()
         assert example.value == 123.456
+        assert example.price == decimal.getcontext().create_decimal(0.12345678)
         assert example.data == {"foo": 123}

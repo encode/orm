@@ -67,6 +67,18 @@ class Float(ModelField, typesystem.Float):
         return sqlalchemy.Float()
 
 
+class Decimal(ModelField, typesystem.Decimal):
+    def get_column_type(self):
+        return sqlalchemy.Numeric(scale=self.scale, precision=self.precision)
+
+    def __init__(self, scale: int, precision: int, **kwargs):
+        assert scale, "scale is required"
+        assert precision, "precision is required"
+        self.precision = precision
+        self.scale = scale
+        super().__init__(**kwargs)
+
+
 class Boolean(ModelField, typesystem.Boolean):
     def get_column_type(self):
         return sqlalchemy.Boolean()

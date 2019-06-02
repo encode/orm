@@ -171,6 +171,7 @@ See TypeSystem for [type-specific validation keyword arguments][typesystem-field
 * `orm.Boolean()`
 * `orm.Integer()`
 * `orm.Float()`
+* `orm.Decimal()`
 * `orm.Date()`
 * `orm.Time()`
 * `orm.DateTime()`
