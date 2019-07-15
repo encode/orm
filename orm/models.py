@@ -222,6 +222,12 @@ class QuerySet:
         )
         kwargs = validator.validate(kwargs)
 
+        # Remove primary key when None to prevent not null constraint in postgresql.
+        pkname = self.model_cls.__pkname__
+        pk = self.model_cls.fields[pkname]
+        if kwargs[pkname] is None and pk.allow_null:
+            del kwargs[pkname]
+
         # Build the insert expression.
         expr = self.table.insert()
         expr = expr.values(**kwargs)
