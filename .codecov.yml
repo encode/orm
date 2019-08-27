@@ -5,7 +5,7 @@ coverage:
 
   status:
     project: yes
-    patch: no
-    changes: no
+    patch: yes
+    changes: yes
 
 comment: off
