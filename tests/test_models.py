@@ -110,6 +110,10 @@ async def test_model_get():
         with pytest.raises(orm.MultipleMatches):
             await User.objects.get()
 
+        same_user = await User.objects.get(pk=user.id)
+        assert same_user.id == user.id
+        assert same_user.pk == user.pk
+
 
 @async_adapter
 async def test_model_filter():
