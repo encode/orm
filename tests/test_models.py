@@ -227,16 +227,16 @@ async def test_model_choices():
 
         assert (
             len(
-                await User.objects.filter(
-                    name__iexact="Dark Side of the Moon", type="digital"
+                await Product.objects.filter(
+                    name="Dark Side of the Moon", type="digital"
                 ).all()
             )
             == 1
         )
         assert (
             len(
-                await User.objects.filter(
-                    name__iexact="Pink Floyd T-Shirt", type="physical"
+                await Product.objects.filter(
+                    name="Pink Floyd T-Shirt", type="physical"
                 ).all()
             )
             == 1
