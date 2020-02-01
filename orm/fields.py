@@ -52,7 +52,7 @@ class ModelField:
             return value
 
 
-class String(ModelField, ChoiceField, typesystem.String):
+class String(ModelField, typesystem.String):
     def __init__(self, **kwargs):
         assert "max_length" in kwargs, "max_length is required"
         super().__init__(**kwargs)
@@ -66,7 +66,7 @@ class Text(ModelField, typesystem.Text):
         return sqlalchemy.Text()
 
 
-class Integer(ModelField, ChoiceField, typesystem.Integer):
+class Integer(ModelField, typesystem.Integer):
     def get_column_type(self):
         return sqlalchemy.Integer()
 
