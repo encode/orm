@@ -210,12 +210,16 @@ async def test_model_choices():
             name="Dark Side of the Moon", rating=5, type="digital"
         )
         try:
-            assert not await Product.objects.create(name="Tom", type="invalid")
+            assert not (
+                True or await Product.objects.create(name="Tom", type="invalid")
+            )
         except typesystem.base.ValidationError:
             pass
 
         try:
-            assert not await Product.objects.create(name="Tom", type="thisistoolong")
+            assert not (
+                True or await Product.objects.create(name="Tom", type="thisistoolong")
+            )
         except typesystem.base.ValidationError:
             pass
 
