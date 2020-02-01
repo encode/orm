@@ -10,6 +10,7 @@ class ModelField:
         primary_key: bool = False,
         index: bool = False,
         unique: bool = False,
+        choices: typing.Sequence[typing.Union[str, typing.Tuple[str, str]]] = None,
         **kwargs: typing.Any,
     ) -> None:
         if primary_key:
@@ -18,6 +19,7 @@ class ModelField:
         self.primary_key = primary_key
         self.index = index
         self.unique = unique
+        self._choice_class = typesystem.Choice(choices=choices)
 
     def get_column(self, name: str) -> sqlalchemy.Column:
         column_type = self.get_column_type()
@@ -42,17 +44,13 @@ class ModelField:
     def expand_relationship(self, value):
         return value
 
-class ChoiceField:
-    def __init__(self, choices=None, **kwargs):
-        super().__init__(**kwargs)
-        self._choice_class = typesystem.Choice(choices=choices)
-
     def validate(self, *args, **kwargs) -> typing.Any:
         value = self._choice_class.validate(*args, **kwargs)
         try:
             return super().validate(*args, **kwargs)
         except NotImplementedError:
             return value
+
 
 class String(ModelField, ChoiceField, typesystem.String):
     def __init__(self, **kwargs):
