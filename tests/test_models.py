@@ -1,12 +1,11 @@
 import asyncio
 import functools
 
-import pytest
-import sqlalchemy
-
 import databases
 import orm
-
+import pytest
+import sqlalchemy
+import typesystem
 from tests.settings import DATABASE_URL
 
 database = databases.Database(DATABASE_URL, force_rollback=True)
@@ -31,6 +30,11 @@ class Product(orm.Model):
     name = orm.String(max_length=100)
     rating = orm.Integer(minimum=1, maximum=5)
     in_stock = orm.Boolean(default=False)
+    type = orm.String(
+        max_length=9,
+        choices=(("physical", "digital", "thisistoolong")),
+        default="physical",
+    )
 
 
 @pytest.fixture(autouse=True, scope="module")
@@ -193,4 +197,47 @@ async def test_model_limit_with_filter():
         await User.objects.create(name="Tom")
         await User.objects.create(name="Tom")
 
-        assert len(await User.objects.limit(2).filter(name__iexact='Tom').all()) == 2
+        assert len(await User.objects.limit(2).filter(name__iexact="Tom").all()) == 2
+
+
+@async_adapter
+async def test_model_choices():
+    async with database:
+        await Product.objects.create(
+            name="Pink Floyd T-Shirt", rating=3, type="physical"
+        )
+        await Product.objects.create(
+            name="Dark Side of the Moon", rating=5, type="digital"
+        )
+        try:
+            await Product.objects.create(name="Tom", type="invalid")
+        except typesystem.base.ValidationError:
+            pass
+        else:
+            raise AssertionError("invalid choice 'invalid' was allowed as a type")
+
+        try:
+            await Product.objects.create(name="Tom", type="thisistoolong")
+        except typesystem.base.ValidationError:
+            pass
+        else:
+            raise AssertionError(
+                " string 'thisistoolong' is longer than max length but was allowed as a type"
+            )
+
+        assert (
+            len(
+                await User.objects.filter(
+                    name__iexact="Dark Side of the Moon", type="digital"
+                ).all()
+            )
+            == 1
+        )
+        assert (
+            len(
+                await User.objects.filter(
+                    name__iexact="Pink Floyd T-Shirt", type="physical"
+                ).all()
+            )
+            == 1
+        )
