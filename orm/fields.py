@@ -42,8 +42,19 @@ class ModelField:
     def expand_relationship(self, value):
         return value
 
+class ChoiceField:
+    def __init__(self, choices=None, **kwargs):
+        super().__init__(**kwargs)
+        self._choice_class = typesystem.Choice(choices=choices)
 
-class String(ModelField, typesystem.String):
+    def validate(self, *args, **kwargs) -> typing.Any:
+        value = self._choice_class.validate(*args, **kwargs)
+        try:
+            return super().validate(*args, **kwargs)
+        except NotImplementedError:
+            return value
+
+class String(ModelField, ChoiceField, typesystem.String):
     def __init__(self, **kwargs):
         assert "max_length" in kwargs, "max_length is required"
         super().__init__(**kwargs)
@@ -57,7 +68,7 @@ class Text(ModelField, typesystem.Text):
         return sqlalchemy.Text()
 
 
-class Integer(ModelField, typesystem.Integer):
+class Integer(ModelField, ChoiceField, typesystem.Integer):
     def get_column_type(self):
         return sqlalchemy.Integer()
 
