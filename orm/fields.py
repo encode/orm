@@ -19,7 +19,9 @@ class ModelField:
         self.primary_key = primary_key
         self.index = index
         self.unique = unique
-        self._choice_class = typesystem.Choice(choices=choices)
+
+        if choices is not None:
+            self._choice_class = typesystem.Choice(choices=choices)
 
     def get_column(self, name: str) -> sqlalchemy.Column:
         column_type = self.get_column_type()
@@ -45,11 +47,12 @@ class ModelField:
         return value
 
     def validate(self, *args, **kwargs) -> typing.Any:
-        value = self._choice_class.validate(*args, **kwargs)
         try:
-            return super().validate(*args, **kwargs)
-        except NotImplementedError:
-            return value
+            self._choice_class.validate(*args, **kwargs)
+        except AttributeError:
+            pass
+
+        return super().validate(*args, **kwargs)
 
 
 class String(ModelField, typesystem.String):
