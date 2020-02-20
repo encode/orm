@@ -217,6 +217,14 @@ class QuerySet:
             raise MultipleMatches()
         return self.model_cls.from_row(rows[0], select_related=self._select_related)
 
+    async def first(self, **kwargs):
+        if kwargs:
+            return await self.filter(**kwargs).first()
+
+        rows = await self.limit(1).all()
+        if rows:
+            return rows[0]
+
     async def create(self, **kwargs):
         # Validate the keyword arguments.
         fields = self.model_cls.fields
