@@ -194,3 +194,16 @@ async def test_model_limit_with_filter():
         await User.objects.create(name="Tom")
 
         assert len(await User.objects.limit(2).filter(name__iexact='Tom').all()) == 2
+
+@async_adapter
+async def test_get_or_create():
+    async with database:
+        tom = await User.objects.get_or_create(name="Tom")
+        assert await User.objects.count() == 1
+
+        assert await User.objects.get_or_create(name="Tom") == tom
+        assert await User.objects.count() == 1
+
+        assert await User.objects.create(name="Tom")
+        with pytest.raises(orm.exceptions.MultipleMatches):
+            await User.objects.get_or_create(name="Tom")

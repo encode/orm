@@ -241,6 +241,12 @@ class QuerySet:
         instance.pk = await self.database.execute(expr)
         return instance
 
+    async def get_or_create(self, **kwargs):
+        try:
+            return await self.get(**kwargs)
+        except NoMatch:
+            return await self.create(**kwargs)
+
 
 class Model(typesystem.Schema, metaclass=ModelMetaclass):
     __abstract__ = True
