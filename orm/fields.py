@@ -93,16 +93,17 @@ class JSON(ModelField, typesystem.Any):
 
 
 class ForeignKey(ModelField, typesystem.Field):
-    def __init__(self, to, allow_null: bool = False):
+    def __init__(self, to, allow_null: bool = False, ondelete: str = None):
         super().__init__(allow_null=allow_null)
         self.to = to
+        self.ondelete = ondelete
 
     def validate(self, value, strict=False):
         return value.pk
 
     def get_constraints(self):
         fk_string = self.to.__tablename__ + "." + self.to.__pkname__
-        return [sqlalchemy.schema.ForeignKey(fk_string)]
+        return [sqlalchemy.schema.ForeignKey(fk_string, ondelete=self.ondelete)]
 
     def get_column_type(self):
         to_column = self.to.fields[self.to.__pkname__]

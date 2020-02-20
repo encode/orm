@@ -28,7 +28,7 @@ class Track(orm.Model):
     __database__ = database
 
     id = orm.Integer(primary_key=True)
-    album = orm.ForeignKey(Album)
+    album = orm.ForeignKey(Album, ondelete="CASCADE")
     title = orm.String(max_length=100)
     position = orm.Integer()
 
@@ -172,3 +172,12 @@ async def test_multiple_fk():
         assert len(members) == 4
         for member in members:
             assert member.team.org.ident == "ACME Ltd"
+
+@async_adapter
+async def test_ondelete():
+    async with database:
+        album = await Album.objects.create(name="Malibu")
+        await Track.objects.create(album=album, title="The Bird", position=1)
+        await album.delete()
+        albums = await Album.objects.all()
+        assert len(albums) == 0
