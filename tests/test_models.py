@@ -208,7 +208,7 @@ async def test_model_choices():
             name="Dark Side of the Moon", rating=5, type="digital"
         ))
         with pytest.raises(typesystem.base.ValidationError, message="Expecting `typesystem.base.ValidationError` when creating an item with type not in choices..."):
-            await Product.objects.create(name="Tom", type="invalid"))
+            await Product.objects.create(name="Tom", type="invalid")
         with pytest.raises(typesystem.base.ValidationError, message="Expecting `typesystem.base.ValidationError` when creating an item with type that's too long..."):
             await Product.objects.create(name="Tom", type="thisistoolong")
 
