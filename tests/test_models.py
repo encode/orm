@@ -199,29 +199,18 @@ async def test_model_limit_with_filter():
 
         assert len(await User.objects.limit(2).filter(name__iexact="Tom").all()) == 2
 
-
 @async_adapter
 async def test_model_choices():
     async with database:
-        await Product.objects.create(
+        await asyncio.gather(Product.objects.create(
             name="Pink Floyd T-Shirt", rating=3, type="physical"
-        )
-        await Product.objects.create(
+        ), Product.objects.create(
             name="Dark Side of the Moon", rating=5, type="digital"
-        )
-        try:
-            assert not (
-                True or await Product.objects.create(name="Tom", type="invalid")
-            )
-        except typesystem.base.ValidationError:
-            pass
-
-        try:
-            assert not (
-                True or await Product.objects.create(name="Tom", type="thisistoolong")
-            )
-        except typesystem.base.ValidationError:
-            pass
+        ))
+        with pytest.raises(typesystem.base.ValidationError, message="Expecting `typesystem.base.ValidationError` when creating an item with type not in choices..."):
+            await Product.objects.create(name="Tom", type="invalid"))
+        with pytest.raises(typesystem.base.ValidationError, message="Expecting `typesystem.base.ValidationError` when creating an item with type that's too long..."):
+            await Product.objects.create(name="Tom", type="thisistoolong")
 
         assert (
             len(
