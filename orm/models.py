@@ -189,7 +189,7 @@ class QuerySet:
         )
 
     async def count(self) -> int:
-        expr = self.build_select_expression()
+        expr = self.build_select_expression().alias("subquery_for_count")
         expr = sqlalchemy.func.count().select().select_from(expr)
         return await self.database.fetch_val(expr)
 
