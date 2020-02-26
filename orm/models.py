@@ -94,13 +94,15 @@ class QuerySet:
 
         return expr
 
-    def filter(self, **kwargs):
+    def filter(self, exclude=False, **kwargs):
         filter_clauses = self.filter_clauses
         select_related = list(self._select_related)
 
         if kwargs.get("pk"):
             pk_name = self.model_cls.__pkname__
             kwargs[pk_name] = kwargs.pop("pk")
+
+        clauses = []
 
         for key, value in kwargs.items():
             if "__" in key:
@@ -154,7 +156,13 @@ class QuerySet:
 
             clause = getattr(column, op_attr)(value)
             clause.modifiers['escape'] = '\\' if has_escaped_character else None
-            filter_clauses.append(clause)
+
+            clauses.append(clause)
+
+        if exclude:
+            filter_clauses.append(~sqlalchemy.sql.and_(*clauses))
+        else:
+            filter_clauses += clauses
 
         return self.__class__(
             model_cls=self.model_cls,
@@ -162,6 +170,9 @@ class QuerySet:
             select_related=select_related,
             limit_count=self.limit_count
         )
+
+    def exclude(self, **kwargs):
+        return self.filter(exclude=True, **kwargs)
 
     def select_related(self, related):
         if not isinstance(related, (list, tuple)):
