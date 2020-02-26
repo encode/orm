@@ -209,10 +209,20 @@ async def test_model_limit_with_filter():
         await User.objects.create(name="Tom")
         await User.objects.create(name="Tom")
         await User.objects.create(name="Tom")
+        assert len(await User.objects.limit(2).filter(name__iexact='Tom').all()) == 2
 
-        assert len(await User.objects.limit(2).filter(name__iexact="Tom").all()) == 2
+@async_adapter
+async def test_model_first():
+    async with database:
+        tom = await User.objects.create(name="Tom")
+        jane = await User.objects.create(name="Jane")
 
+        assert await User.objects.first() == tom
+        assert await User.objects.first(name="Jane") == jane
+        assert await User.objects.filter(name="Jane").first() == jane
+        assert await User.objects.filter(name="Lucy").first() is None
 
+        
 @async_adapter
 async def test_model_choices():
     """Test that choices work properly for various types of fields."""
