@@ -30,10 +30,23 @@ class Product(orm.Model):
     name = orm.String(max_length=100)
     rating = orm.Integer(minimum=1, maximum=5)
     in_stock = orm.Boolean(default=False)
-    type = orm.String(
-        max_length=9,
-        choices=(("physical", "digital", "thisistoolong")),
-        default="physical",
+
+
+country_name_choices = ("Canada", "Algeria", "United States")
+country_taxed_choices = (True,)
+country_country_code_choices = (-10, 1, 213, 1200)
+
+
+class Country(orm.Model):
+    __tablename__ = "country"
+    __metadata__ = metadata
+    __database__ = database
+
+    id = orm.Integer(primary_key=True)
+    name = orm.String(max_length=9, choices=country_name_choices, default="Canada",)
+    taxed = orm.Boolean(choices=country_taxed_choices, default=True)
+    country_code = orm.Integer(
+        minimum=0, maximum=1000, choices=country_country_code_choices, default=1
     )
 
 
@@ -199,32 +212,44 @@ async def test_model_limit_with_filter():
 
         assert len(await User.objects.limit(2).filter(name__iexact="Tom").all()) == 2
 
+
 @async_adapter
 async def test_model_choices():
+    """Test that choices work properly for various types of fields."""
     async with database:
-        await asyncio.gather(Product.objects.create(
-            name="Pink Floyd T-Shirt", rating=3, type="physical"
-        ), Product.objects.create(
-            name="Dark Side of the Moon", rating=5, type="digital"
-        ))
-        with pytest.raises(typesystem.base.ValidationError, message="Expecting `typesystem.base.ValidationError` when creating an item with type not in choices..."):
-            await Product.objects.create(name="Tom", type="invalid")
-        with pytest.raises(typesystem.base.ValidationError, message="Expecting `typesystem.base.ValidationError` when creating an item with type that's too long..."):
-            await Product.objects.create(name="Tom", type="thisistoolong")
+        # Test valid choices.
+        await asyncio.gather(
+            Country.objects.create(name="Canada", taxed=True, country_code=1),
+            Country.objects.create(name="Algeria", taxed=True, country_code=213),
+            Country.objects.create(name="Algeria"),
+        )
 
-        assert (
-            len(
-                await Product.objects.filter(
-                    name="Dark Side of the Moon", type="digital"
-                ).all()
-            )
-            == 1
-        )
-        assert (
-            len(
-                await Product.objects.filter(
-                    name="Pink Floyd T-Shirt", type="physical"
-                ).all()
-            )
-            == 1
-        )
+        with pytest.raises(typesystem.base.ValidationError):
+            name, taxed, country_code = "Saudi Arabia", True, 1
+            assert all((name not in country_name_choices, taxed in country_taxed_choices, country_code in country_country_code_choices))
+            await Country.objects.create(name=name, taxed=taxed, country_code=country_code)
+
+        with pytest.raises(typesystem.base.ValidationError):
+            name, taxed, country_code = "Algeria", False, 1
+            assert all((name in country_name_choices, taxed not in country_taxed_choices, country_code in country_country_code_choices))
+            await Country.objects.create(name=name, taxed=taxed, country_code=country_code)
+
+        with pytest.raises(typesystem.base.ValidationError):
+            name, taxed, country_code = "Algeria", True, 967
+            assert all((name in country_name_choices, taxed in country_taxed_choices, country_code not in country_country_code_choices))
+            await Country.objects.create(name=name, taxed=taxed, country_code=country_code)
+            
+        with pytest.raises(typesystem.base.ValidationError):
+            name, taxed, country_code = "United States", True, 1 # name is too long but is a valid choice
+            assert all((name in country_name_choices, taxed in country_taxed_choices, country_code in country_country_code_choices))
+            await Country.objects.create(name=name, taxed=taxed, country_code=country_code)
+
+        with pytest.raises(typesystem.base.ValidationError):
+            name, taxed, country_code = "Algeria", True, -10 # country code is too small but is a valid choice
+            assert all((name in country_name_choices, taxed in country_taxed_choices, country_code in country_country_code_choices))
+            await Country.objects.create(name=name, taxed=taxed, country_code=country_code)
+
+        with pytest.raises(typesystem.base.ValidationError):
+            name, taxed, country_code = "Algeria", True, 1200 # country code is too large but is a valid choice
+            assert all((name in country_name_choices, taxed in country_taxed_choices, country_code in country_country_code_choices))
+            await Country.objects.create(name=name, taxed=taxed, country_code=country_code)
