@@ -94,7 +94,13 @@ class QuerySet:
 
         return expr
 
-    def filter(self, exclude=False, **kwargs):
+    def filter(self, **kwargs):
+        return self._parse_filters(**kwargs)
+
+    def exclude(self, **kwargs):
+        return self._parse_filters(exclude=True, **kwargs)
+
+    def _parse_filters(self, exclude=False, **kwargs):
         filter_clauses = self.filter_clauses
         select_related = list(self._select_related)
 
@@ -170,9 +176,6 @@ class QuerySet:
             select_related=select_related,
             limit_count=self.limit_count
         )
-
-    def exclude(self, **kwargs):
-        return self.filter(exclude=True, **kwargs)
 
     def select_related(self, related):
         if not isinstance(related, (list, tuple)):
