@@ -95,22 +95,22 @@ class QuerySet:
         return expr
 
     def filter(self, **kwargs):
-        return self._parse_filters(**kwargs)
+        return self._parse_filters(kwargs)
 
     def exclude(self, **kwargs):
-        return self._parse_filters(exclude=True, **kwargs)
+        return self._parse_filters(kwargs, exclude=True)
 
-    def _parse_filters(self, exclude=False, **kwargs):
+    def _parse_filters(self, filters, exclude=False):
         filter_clauses = self.filter_clauses
         select_related = list(self._select_related)
 
-        if kwargs.get("pk"):
+        if filters.get("pk"):
             pk_name = self.model_cls.__pkname__
-            kwargs[pk_name] = kwargs.pop("pk")
+            filters[pk_name] = filters.pop("pk")
 
         clauses = []
 
-        for key, value in kwargs.items():
+        for key, value in filters.items():
             if "__" in key:
                 parts = key.split("__")
 
