@@ -18,8 +18,10 @@ class User(orm.Model):
     __metadata__ = metadata
     __database__ = database
 
-    id = orm.Integer(primary_key=True)
-    name = orm.String(max_length=100)
+    fields = {
+        "id": orm.Integer(primary_key=True),
+        "name": orm.String(max_length=100),
+    }
 
 
 class Product(orm.Model):
@@ -27,10 +29,12 @@ class Product(orm.Model):
     __metadata__ = metadata
     __database__ = database
 
-    id = orm.Integer(primary_key=True)
-    name = orm.String(max_length=100)
-    rating = orm.Integer(minimum=1, maximum=5)
-    in_stock = orm.Boolean(default=False)
+    fields = {
+        "id": orm.Integer(primary_key=True),
+        "name": orm.String(max_length=100),
+        "rating": orm.Integer(minimum=1, maximum=5),
+        "in_stock": orm.Boolean(default=False),
+    }
 
 
 @pytest.fixture(autouse=True, scope="module")
@@ -60,8 +64,15 @@ def test_model_class():
     assert isinstance(User.fields["id"], orm.Integer)
     assert User.fields["id"].primary_key is True
     assert isinstance(User.fields["name"], orm.String)
-    assert User.fields["name"].max_length == 100
+    assert User.fields["name"].validator.max_length == 100
     assert isinstance(User.__table__, sqlalchemy.Table)
+
+    with pytest.raises(ValueError):
+        User(invalid='123')
+
+    assert User(id=1) != Product(id=1)
+    assert User(id=1) != User(id=2)
+    assert User(id=1) == User(id=1)
 
 
 def test_model_pk():

@@ -24,13 +24,15 @@ class Example(orm.Model):
     __metadata__ = metadata
     __database__ = database
 
-    id = orm.Integer(primary_key=True)
-    created = orm.DateTime(default=datetime.datetime.now)
-    created_day = orm.Date(default=datetime.date.today)
-    created_time = orm.Time(default=time)
-    description = orm.Text(allow_blank=True)
-    value = orm.Float(allow_null=True)
-    data = orm.JSON(default={})
+    fields = {
+        "id": orm.Integer(primary_key=True),
+        "created": orm.DateTime(default=datetime.datetime.now),
+        "created_day": orm.Date(default=datetime.date.today),
+        "created_time": orm.Time(default=time),
+        "description": orm.Text(allow_blank=True),
+        "value": orm.Float(allow_null=True),
+        "data": orm.JSON(default={})
+    }
 
 
 @pytest.fixture(autouse=True, scope="module")

@@ -14,6 +14,7 @@ class ModelField:
     ) -> None:
         if primary_key:
             kwargs["allow_null"] = True
+        self.allow_null = kwargs.get("allow_null", False)
         self.primary_key = primary_key
         self.index = index
         self.unique = unique
@@ -21,14 +22,13 @@ class ModelField:
 
     def get_column(self, name: str) -> sqlalchemy.Column:
         column_type = self.get_column_type()
-        allow_null = getattr(self, "allow_null", False)
         constraints = self.get_constraints()
         return sqlalchemy.Column(
             name,
             column_type,
             *constraints,
             primary_key=self.primary_key,
-            nullable=allow_null and not self.primary_key,
+            nullable=self.allow_null and not self.primary_key,
             index=self.index,
             unique=self.unique,
         )
@@ -116,22 +116,23 @@ class Time(ModelField):
 
 class JSON(ModelField):
     def get_validator(self, **kwargs) -> typesystem.Field:
-        return typesystem.Any()
+        return typesystem.Any(**kwargs)
 
     def get_column_type(self):
         return sqlalchemy.JSON()
 
 
 class ForeignKey(ModelField):
+    class ForeignKeyValidator(typesystem.Field):
+        def validate(self, value):
+            return value.pk
+
     def __init__(self, to, allow_null: bool = False):
         super().__init__(allow_null=allow_null)
         self.to = to
 
-    def validate(self, value):
-        return value.pk
-
     def get_validator(self, **kwargs) -> typesystem.Field:
-        return typesystem.Any()
+        return self.ForeignKeyValidator()
 
     def get_constraints(self):
         fk_string = self.to.__tablename__ + "." + self.to.__pkname__
@@ -144,4 +145,4 @@ class ForeignKey(ModelField):
     def expand_relationship(self, value):
         if isinstance(value, self.to):
             return value
-        return self.to({self.to.__pkname__: value})
+        return self.to(pk=value)

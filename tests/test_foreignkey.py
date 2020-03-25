@@ -18,8 +18,10 @@ class Album(orm.Model):
     __metadata__ = metadata
     __database__ = database
 
-    id = orm.Integer(primary_key=True)
-    name = orm.String(max_length=100)
+    fields = {
+        "id": orm.Integer(primary_key=True),
+        "name": orm.String(max_length=100),
+    }
 
 
 class Track(orm.Model):
@@ -27,10 +29,12 @@ class Track(orm.Model):
     __metadata__ = metadata
     __database__ = database
 
-    id = orm.Integer(primary_key=True)
-    album = orm.ForeignKey(Album)
-    title = orm.String(max_length=100)
-    position = orm.Integer()
+    fields = {
+        "id": orm.Integer(primary_key=True),
+        "album": orm.ForeignKey(Album),
+        "title": orm.String(max_length=100),
+        "position": orm.Integer(),
+    }
 
 
 class Organisation(orm.Model):
@@ -38,8 +42,10 @@ class Organisation(orm.Model):
     __metadata__ = metadata
     __database__ = database
 
-    id = orm.Integer(primary_key=True)
-    ident = orm.String(max_length=100)
+    fields = {
+        "id": orm.Integer(primary_key=True),
+        "ident": orm.String(max_length=100),
+    }
 
 
 class Team(orm.Model):
@@ -47,9 +53,11 @@ class Team(orm.Model):
     __metadata__ = metadata
     __database__ = database
 
-    id = orm.Integer(primary_key=True)
-    org = orm.ForeignKey(Organisation)
-    name = orm.String(max_length=100)
+    fields = {
+        "id": orm.Integer(primary_key=True),
+        "org": orm.ForeignKey(Organisation),
+        "name": orm.String(max_length=100),
+    }
 
 
 class Member(orm.Model):
@@ -57,9 +65,11 @@ class Member(orm.Model):
     __metadata__ = metadata
     __database__ = database
 
-    id = orm.Integer(primary_key=True)
-    team = orm.ForeignKey(Team)
-    email = orm.String(max_length=100)
+    fields = {
+        "id": orm.Integer(primary_key=True),
+        "team": orm.ForeignKey(Team),
+        "email": orm.String(max_length=100),
+    }
 
 
 @pytest.fixture(autouse=True, scope="module")

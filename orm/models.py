@@ -1,8 +1,8 @@
 import typing
+from abc import ABCMeta
 
 import sqlalchemy
 import typesystem
-from typesystem.schemas import SchemaMetaclass
 
 from orm.exceptions import MultipleMatches, NoMatch
 from orm.fields import ForeignKey
@@ -21,7 +21,7 @@ FILTER_OPERATORS = {
 }
 
 
-class ModelMetaclass(SchemaMetaclass):
+class ModelMetaclass(ABCMeta):
     def __new__(
         cls: type, name: str, bases: typing.Sequence[type], attrs: dict
     ) -> type:
@@ -216,9 +216,8 @@ class QuerySet:
     async def create(self, **kwargs):
         # Validate the keyword arguments.
         fields = self.model_cls.fields
-        required = [key for key, value in fields.items() if not value.has_default()]
-        validator = typesystem.Object(
-            properties=fields, required=required, additional_properties=False
+        validator = typesystem.Schema(
+            fields={key: value.validator for key, value in fields.items()}
         )
         kwargs = validator.validate(kwargs)
 
@@ -233,20 +232,23 @@ class QuerySet:
         expr = expr.values(**kwargs)
 
         # Execute the insert, and return a new model instance.
-        instance = self.model_cls(kwargs)
+        instance = self.model_cls(**kwargs)
         instance.pk = await self.database.execute(expr)
         return instance
 
 
-class Model(typesystem.Schema, metaclass=ModelMetaclass):
+class Model(metaclass=ModelMetaclass):
     __abstract__ = True
 
     objects = QuerySet()
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, **kwargs):
         if "pk" in kwargs:
             kwargs[self.__pkname__] = kwargs.pop("pk")
-        super().__init__(*args, **kwargs)
+        for key, value in kwargs.items():
+            if key not in self.fields:
+                raise ValueError(f"Invalid keyword {key} for class {self.__class__.__name__}")
+            setattr(self, key, value)
 
     @property
     def pk(self):
@@ -258,8 +260,8 @@ class Model(typesystem.Schema, metaclass=ModelMetaclass):
 
     async def update(self, **kwargs):
         # Validate the keyword arguments.
-        fields = {key: field for key, field in self.fields.items() if key in kwargs}
-        validator = typesystem.Object(properties=fields)
+        fields = {key: field.validator for key, field in self.fields.items() if key in kwargs}
+        validator = typesystem.Schema(fields=fields)
         kwargs = validator.validate(kwargs)
 
         # Build the update expression.
@@ -316,7 +318,7 @@ class Model(typesystem.Schema, metaclass=ModelMetaclass):
             if column.name not in item:
                 item[column.name] = row[column]
 
-        return cls(item)
+        return cls(**item)
 
     def __setattr__(self, key, value):
         if key in self.fields:
@@ -324,3 +326,11 @@ class Model(typesystem.Schema, metaclass=ModelMetaclass):
             # fully-fledged relationship instance, with just the pk loaded.
             value = self.fields[key].expand_relationship(value)
         super().__setattr__(key, value)
+
+    def __eq__(self, other):
+        if self.__class__ != other.__class__:
+            return False
+        for key in self.fields.keys():
+            if getattr(self, key, None) != getattr(other, key, None):
+                return False
+        return True
