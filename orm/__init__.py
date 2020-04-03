@@ -1,6 +1,6 @@
 from orm.exceptions import MultipleMatches, NoMatch
 from orm.fields import Boolean, Integer, Float, String, Text, Date, Time, DateTime, JSON, ForeignKey
-from orm.models import Model
+from orm.models import Model, ModelRegistry
 
 __version__ = "0.1.5"
 __all__ = [
@@ -17,4 +17,5 @@ __all__ = [
     "JSON",
     "ForeignKey",
     "Model",
+    "ModelRegistry"
 ]

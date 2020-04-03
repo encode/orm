@@ -10,14 +10,21 @@ import orm
 from tests.settings import DATABASE_URL
 
 database = databases.Database(DATABASE_URL, force_rollback=True)
-metadata = sqlalchemy.MetaData()
+models = orm.ModelRegistry(
+    database=database,
+    installed=[
+        "tests.test_foreignkey.Album",
+        "tests.test_foreignkey.Track",
+        "tests.test_foreignkey.Organisation",
+        "tests.test_foreignkey.Team",
+        "tests.test_foreignkey.Member",
+    ]
+)
 
 
 class Album(orm.Model):
-    __tablename__ = "album"
-    __metadata__ = metadata
-    __database__ = database
-
+    tablename = "album"
+    registry = models
     fields = {
         "id": orm.Integer(primary_key=True),
         "name": orm.String(max_length=100),
@@ -25,23 +32,19 @@ class Album(orm.Model):
 
 
 class Track(orm.Model):
-    __tablename__ = "track"
-    __metadata__ = metadata
-    __database__ = database
-
+    tablename = "track"
+    registry = models
     fields = {
         "id": orm.Integer(primary_key=True),
-        "album": orm.ForeignKey(Album),
+        "album": orm.ForeignKey("album"),
         "title": orm.String(max_length=100),
         "position": orm.Integer(),
     }
 
 
 class Organisation(orm.Model):
-    __tablename__ = "org"
-    __metadata__ = metadata
-    __database__ = database
-
+    tablename = "org"
+    registry = models
     fields = {
         "id": orm.Integer(primary_key=True),
         "ident": orm.String(max_length=100),
@@ -49,25 +52,21 @@ class Organisation(orm.Model):
 
 
 class Team(orm.Model):
-    __tablename__ = "team"
-    __metadata__ = metadata
-    __database__ = database
-
+    tablename = "team"
+    registry = models
     fields = {
         "id": orm.Integer(primary_key=True),
-        "org": orm.ForeignKey(Organisation),
+        "org": orm.ForeignKey("org"),
         "name": orm.String(max_length=100),
     }
 
 
 class Member(orm.Model):
-    __tablename__ = "member"
-    __metadata__ = metadata
-    __database__ = database
-
+    tablename = "member"
+    registry = models
     fields = {
         "id": orm.Integer(primary_key=True),
-        "team": orm.ForeignKey(Team),
+        "team": orm.ForeignKey("team"),
         "email": orm.String(max_length=100),
     }
 
@@ -75,9 +74,9 @@ class Member(orm.Model):
 @pytest.fixture(autouse=True, scope="module")
 def create_test_database():
     engine = sqlalchemy.create_engine(DATABASE_URL)
-    metadata.create_all(engine)
+    models.metadata.create_all(engine)
     yield
-    metadata.drop_all(engine)
+    models.metadata.drop_all(engine)
 
 
 def async_adapter(wrapped_func):

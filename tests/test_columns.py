@@ -12,18 +12,20 @@ from tests.settings import DATABASE_URL
 
 
 database = databases.Database(DATABASE_URL, force_rollback=True)
-metadata = sqlalchemy.MetaData()
-
+models = orm.ModelRegistry(
+    database=database,
+    installed=[
+        "tests.test_columns.Example",
+    ]
+)
 
 def time():
     return datetime.datetime.now().time()
 
 
 class Example(orm.Model):
-    __tablename__ = "example"
-    __metadata__ = metadata
-    __database__ = database
-
+    tablename = "example"
+    registry = models
     fields = {
         "id": orm.Integer(primary_key=True),
         "created": orm.DateTime(default=datetime.datetime.now),
@@ -38,9 +40,9 @@ class Example(orm.Model):
 @pytest.fixture(autouse=True, scope="module")
 def create_test_database():
     engine = sqlalchemy.create_engine(DATABASE_URL)
-    metadata.create_all(engine)
+    models.metadata.create_all(engine)
     yield
-    metadata.drop_all(engine)
+    models.metadata.drop_all(engine)
 
 
 def async_adapter(wrapped_func):

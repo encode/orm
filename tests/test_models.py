@@ -10,14 +10,18 @@ import orm
 from tests.settings import DATABASE_URL
 
 database = databases.Database(DATABASE_URL, force_rollback=True)
-metadata = sqlalchemy.MetaData()
+models = orm.ModelRegistry(
+    database=database,
+    installed=[
+        "tests.test_models.User",
+        "tests.test_models.Product",
+    ]
+)
 
 
 class User(orm.Model):
-    __tablename__ = "users"
-    __metadata__ = metadata
-    __database__ = database
-
+    tablename = "users"
+    registry = models
     fields = {
         "id": orm.Integer(primary_key=True),
         "name": orm.String(max_length=100),
@@ -25,10 +29,8 @@ class User(orm.Model):
 
 
 class Product(orm.Model):
-    __tablename__ = "product"
-    __metadata__ = metadata
-    __database__ = database
-
+    tablename = "product"
+    registry = models
     fields = {
         "id": orm.Integer(primary_key=True),
         "name": orm.String(max_length=100),
@@ -37,12 +39,14 @@ class Product(orm.Model):
     }
 
 
+models.load()
+
 @pytest.fixture(autouse=True, scope="module")
 def create_test_database():
     engine = sqlalchemy.create_engine(DATABASE_URL)
-    metadata.create_all(engine)
+    models.metadata.create_all(engine)
     yield
-    metadata.drop_all(engine)
+    models.metadata.drop_all(engine)
 
 
 def async_adapter(wrapped_func):
@@ -65,7 +69,6 @@ def test_model_class():
     assert User.fields["id"].primary_key is True
     assert isinstance(User.fields["name"], orm.String)
     assert User.fields["name"].validator.max_length == 100
-    assert isinstance(User.__table__, sqlalchemy.Table)
 
     with pytest.raises(ValueError):
         User(invalid='123')

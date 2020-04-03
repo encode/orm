@@ -20,7 +20,7 @@ class ModelField:
         self.unique = unique
         self.validator = self.get_validator(**kwargs)
 
-    def get_column(self, name: str) -> sqlalchemy.Column:
+    def get_column(self, name: str, models: dict) -> sqlalchemy.Column:
         column_type = self.get_column_type()
         constraints = self.get_constraints()
         return sqlalchemy.Column(
@@ -42,7 +42,7 @@ class ModelField:
     def get_constraints(self):
         return []
 
-    def expand_relationship(self, value):
+    def expand_relationship(self, value, models):
         return value
 
 
@@ -134,15 +134,22 @@ class ForeignKey(ModelField):
     def get_validator(self, **kwargs) -> typesystem.Field:
         return self.ForeignKeyValidator()
 
-    def get_constraints(self):
-        fk_string = self.to.__tablename__ + "." + self.to.__pkname__
-        return [sqlalchemy.schema.ForeignKey(fk_string)]
+    def get_column(self, name: str, models: dict) -> sqlalchemy.Column:
+        to_model = models[self.to]
+        to_field = to_model.fields[to_model.pkname]
 
-    def get_column_type(self):
-        to_column = self.to.fields[self.to.__pkname__]
-        return to_column.get_column_type()
+        column_type = to_field.get_column_type()
+        constraints = [sqlalchemy.schema.ForeignKey(f"{self.to}.{to_model.pkname}")]
+        return sqlalchemy.Column(
+            name,
+            column_type,
+            *constraints,
+            nullable=self.allow_null,
+            index=True,
+        )
 
-    def expand_relationship(self, value):
-        if isinstance(value, self.to):
+    def expand_relationship(self, value, models):
+        model_cls = models[self.to]
+        if isinstance(value, model_cls):
             return value
-        return self.to(pk=value)
+        return model_cls(pk=value)

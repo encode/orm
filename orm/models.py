@@ -1,6 +1,8 @@
 import typing
 from abc import ABCMeta
+from importlib import import_module
 
+import databases
 import sqlalchemy
 import typesystem
 
@@ -21,35 +23,68 @@ FILTER_OPERATORS = {
 }
 
 
-class ModelMetaclass(ABCMeta):
-    def __new__(
-        cls: type, name: str, bases: typing.Sequence[type], attrs: dict
-    ) -> type:
-        new_model = super(ModelMetaclass, cls).__new__(  # type: ignore
-            cls, name, bases, attrs
-        )
+class ModelRegistry:
+    def __init__(self, database: databases.Database, installed: typing.Sequence[str] = None) -> None:
+        self.database = database
+        self.installed = [] if installed is None else list(installed)
 
-        if attrs.get("__abstract__"):
-            return new_model
+    def load(self):
+        metadata = sqlalchemy.MetaData()
+        tables = {}
+        models = {}
 
-        tablename = attrs["__tablename__"]
-        metadata = attrs["__metadata__"]
-        pkname = None
+        for import_name in self.installed:
+            module_name, class_name = import_name.rsplit('.', 1)
+            module = import_module(module_name)
+            model = getattr(module, class_name)
+            models[model.tablename] = model
 
-        columns = []
-        for name, field in new_model.fields.items():
+        for tablename, model in models.items():
+            fields = getattr(model, 'fields')
+
+            columns = []
+            for name, field in fields.items():
+                columns.append(field.get_column(name, models))
+
+            tables[tablename] = sqlalchemy.Table(tablename, metadata, *columns)
+
+        self._metadata = metadata
+        self._tables = tables
+        self._models = models
+
+    @property
+    def tables(self):
+        if not hasattr(self, '_tables'):
+            self.load()
+        return self._tables
+
+    @property
+    def models(self):
+        if not hasattr(self, '_models'):
+            self.load()
+        return self._models
+
+    @property
+    def metadata(self):
+        if not hasattr(self, '_metadata'):
+            self.load()
+        return self._metadata
+
+
+class ModelMeta(type):
+    def __new__(cls, name, bases, attrs):
+        model_class = super().__new__(cls, name, bases, attrs)
+        for name, field in attrs.get('fields', {}).items():
             if field.primary_key:
-                pkname = name
-            columns.append(field.get_column(name))
-
-        new_model.__table__ = sqlalchemy.Table(tablename, metadata, *columns)
-        new_model.__pkname__ = pkname
-
-        return new_model
+                model_class.pkname = name
+        if 'registry' in attrs:
+            model_class.database = attrs['registry'].database
+        return model_class
 
 
 class QuerySet:
     ESCAPE_CHARACTERS = ['%', '_']
+
     def __init__(self, model_cls=None, filter_clauses=None, select_related=None, limit_count=None):
         self.model_cls = model_cls
         self.filter_clauses = [] if filter_clauses is None else filter_clauses
@@ -61,13 +96,19 @@ class QuerySet:
 
     @property
     def database(self):
-        return self.model_cls.__database__
+        return self.model_cls.registry.database
 
     @property
     def table(self):
-        return self.model_cls.__table__
+        return self.model_cls.registry.tables[self.model_cls.tablename]
+
+    @property
+    def pkname(self):
+        return self.model_cls.pkname
 
     def build_select_expression(self):
+        table_map = self.model_cls.registry.tables
+        model_map = self.model_cls.registry.models
         tables = [self.table]
         select_from = self.table
 
@@ -75,9 +116,10 @@ class QuerySet:
             model_cls = self.model_cls
             select_from = self.table
             for part in item.split("__"):
-                model_cls = model_cls.fields[part].to
-                select_from = sqlalchemy.sql.join(select_from, model_cls.__table__)
-                tables.append(model_cls.__table__)
+                model_cls = model_map[model_cls.fields[part].to]
+                table = table_map[model_cls.tablename]
+                select_from = sqlalchemy.sql.join(select_from, table)
+                tables.append(table)
 
         expr = sqlalchemy.sql.select(tables)
         expr = expr.select_from(select_from)
@@ -95,6 +137,9 @@ class QuerySet:
         return expr
 
     def filter(self, **kwargs):
+        table_map = self.model_cls.registry.tables
+        model_map = self.model_cls.registry.models
+
         filter_clauses = self.filter_clauses
         select_related = list(self._select_related)
 
@@ -123,9 +168,9 @@ class QuerySet:
                     # Walk the relationships to the actual model class
                     # against which the comparison is being made.
                     for part in related_parts:
-                        model_cls = model_cls.fields[part].to
+                        model_cls = model_map[model_cls.fields[part].to]
 
-                column = model_cls.__table__.columns[field_name]
+                column = table_map[model_cls.tablename].columns[field_name]
 
             else:
                 op = "exact"
@@ -222,7 +267,7 @@ class QuerySet:
         kwargs = validator.validate(kwargs)
 
         # Remove primary key when None to prevent not null constraint in postgresql.
-        pkname = self.model_cls.__pkname__
+        pkname = self.pkname
         pk = self.model_cls.fields[pkname]
         if kwargs[pkname] is None and pk.allow_null:
             del kwargs[pkname]
@@ -237,14 +282,12 @@ class QuerySet:
         return instance
 
 
-class Model(metaclass=ModelMetaclass):
-    __abstract__ = True
-
+class Model(metaclass=ModelMeta):
     objects = QuerySet()
 
     def __init__(self, **kwargs):
         if "pk" in kwargs:
-            kwargs[self.__pkname__] = kwargs.pop("pk")
+            kwargs[self.pkname] = kwargs.pop("pk")
         for key, value in kwargs.items():
             if key not in self.fields:
                 raise ValueError(f"Invalid keyword {key} for class {self.__class__.__name__}")
@@ -252,11 +295,15 @@ class Model(metaclass=ModelMetaclass):
 
     @property
     def pk(self):
-        return getattr(self, self.__pkname__)
+        return getattr(self, self.pkname)
 
     @pk.setter
     def pk(self, value):
-        setattr(self, self.__pkname__, value)
+        setattr(self, self.pkname, value)
+
+    @property
+    def table(self):
+        return self.registry.tables[self.tablename]
 
     async def update(self, **kwargs):
         # Validate the keyword arguments.
@@ -265,12 +312,12 @@ class Model(metaclass=ModelMetaclass):
         kwargs = validator.validate(kwargs)
 
         # Build the update expression.
-        pk_column = getattr(self.__table__.c, self.__pkname__)
-        expr = self.__table__.update()
+        pk_column = getattr(self.table.c, self.pkname)
+        expr = self.table.update()
         expr = expr.values(**kwargs).where(pk_column == self.pk)
 
         # Perform the update.
-        await self.__database__.execute(expr)
+        await self.database.execute(expr)
 
         # Update the model instance.
         for key, value in kwargs.items():
@@ -278,19 +325,19 @@ class Model(metaclass=ModelMetaclass):
 
     async def delete(self):
         # Build the delete expression.
-        pk_column = getattr(self.__table__.c, self.__pkname__)
-        expr = self.__table__.delete().where(pk_column == self.pk)
+        pk_column = getattr(self.table.c, self.pkname)
+        expr = self.table.delete().where(pk_column == self.pk)
 
         # Perform the delete.
-        await self.__database__.execute(expr)
+        await self.database.execute(expr)
 
     async def load(self):
         # Build the select expression.
-        pk_column = getattr(self.__table__.c, self.__pkname__)
-        expr = self.__table__.select().where(pk_column == self.pk)
+        pk_column = getattr(self.table.c, self.pkname)
+        expr = self.table.select().where(pk_column == self.pk)
 
         # Perform the fetch.
-        row = await self.__database__.fetch_one(expr)
+        row = await self.database.fetch_one(expr)
 
         # Update the instance.
         for key, value in dict(row).items():
@@ -301,20 +348,22 @@ class Model(metaclass=ModelMetaclass):
         """
         Instantiate a model instance, given a database row.
         """
+        table_map = cls.registry.tables
+        model_map = cls.registry.models
         item = {}
 
         # Instantiate any child instances first.
         for related in select_related:
             if "__" in related:
                 first_part, remainder = related.split("__", 1)
-                model_cls = cls.fields[first_part].to
+                model_cls = model_map[cls.fields[first_part].to]
                 item[first_part] = model_cls.from_row(row, select_related=[remainder])
             else:
-                model_cls = cls.fields[related].to
+                model_cls = model_map[cls.fields[related].to]
                 item[related] = model_cls.from_row(row)
 
         # Pull out the regular column values.
-        for column in cls.__table__.columns:
+        for column in table_map[cls.tablename].columns:
             if column.name not in item:
                 item[column.name] = row[column]
 
@@ -324,7 +373,7 @@ class Model(metaclass=ModelMetaclass):
         if key in self.fields:
             # Setting a relationship to a raw pk value should set a
             # fully-fledged relationship instance, with just the pk loaded.
-            value = self.fields[key].expand_relationship(value)
+            value = self.fields[key].expand_relationship(value, self.registry.models)
         super().__setattr__(key, value)
 
     def __eq__(self, other):
