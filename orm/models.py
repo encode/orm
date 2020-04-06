@@ -59,11 +59,12 @@ class ModelMeta(type):
 class QuerySet:
     ESCAPE_CHARACTERS = ['%', '_']
 
-    def __init__(self, model_cls=None, filter_clauses=None, select_related=None, limit_count=None):
+    def __init__(self, model_cls=None, filter_clauses=None, select_related=None, limit_count=None, offset=None):
         self.model_cls = model_cls
         self.filter_clauses = [] if filter_clauses is None else filter_clauses
         self._select_related = [] if select_related is None else select_related
         self.limit_count = limit_count
+        self.query_offset = offset
 
     def __get__(self, instance, owner):
         return self.__class__(model_cls=owner)
@@ -106,11 +107,18 @@ class QuerySet:
         if self.limit_count:
             expr = expr.limit(self.limit_count)
 
+        if self.query_offset:
+            expr = expr.offset(self.query_offset)
+
         return expr
 
     def filter(self, **kwargs):
         filter_clauses = self.filter_clauses
         select_related = list(self._select_related)
+
+        if kwargs.get("pk"):
+            pk_name = self.model_cls.pkname
+            kwargs[pk_name] = kwargs.pop("pk")
 
         for key, value in kwargs.items():
             if "__" in key:
@@ -170,7 +178,8 @@ class QuerySet:
             model_cls=self.model_cls,
             filter_clauses=filter_clauses,
             select_related=select_related,
-            limit_count=self.limit_count
+            limit_count=self.limit_count,
+            offset=self.query_offset
         )
 
     def select_related(self, related):
@@ -182,7 +191,8 @@ class QuerySet:
             model_cls=self.model_cls,
             filter_clauses=self.filter_clauses,
             select_related=related,
-            limit_count=self.limit_count
+            limit_count=self.limit_count,
+            offset=self.query_offset
         )
 
     async def exists(self) -> bool:
@@ -195,11 +205,22 @@ class QuerySet:
             model_cls=self.model_cls,
             filter_clauses=self.filter_clauses,
             select_related=self._select_related,
-            limit_count=limit_count
+            limit_count=limit_count,
+            offset=self.query_offset
+        )
+
+
+    def offset(self, offset: int):
+        return self.__class__(
+            model_cls=self.model_cls,
+            filter_clauses=self.filter_clauses,
+            select_related=self._select_related,
+            limit_count=self.limit_count,
+            offset=offset
         )
 
     async def count(self) -> int:
-        expr = self.build_select_expression()
+        expr = self.build_select_expression().alias("subquery_for_count")
         expr = sqlalchemy.func.count().select().select_from(expr)
         return await self.database.fetch_val(expr)
 
@@ -226,6 +247,14 @@ class QuerySet:
         if len(rows) > 1:
             raise MultipleMatches()
         return self.model_cls.from_row(rows[0], select_related=self._select_related)
+
+    async def first(self, **kwargs):
+        if kwargs:
+            return await self.filter(**kwargs).first()
+
+        rows = await self.limit(1).all()
+        if rows:
+            return rows[0]
 
     async def create(self, **kwargs):
         # Validate the keyword arguments.
