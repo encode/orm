@@ -1,6 +1,5 @@
 import typing
 from abc import ABCMeta
-from importlib import import_module
 
 import databases
 import sqlalchemy
@@ -27,59 +26,34 @@ class ModelRegistry:
     def __init__(self, database: databases.Database, installed: typing.Sequence[str] = None) -> None:
         self.database = database
         self.installed = [] if installed is None else list(installed)
+        self.metadata = sqlalchemy.MetaData()
+        self.models = {}
 
     def load(self):
-        metadata = sqlalchemy.MetaData()
-        tables = {}
-        models = {}
-
-        for import_name in self.installed:
-            module_name, class_name = import_name.rsplit('.', 1)
-            module = import_module(module_name)
-            model = getattr(module, class_name)
-            models[model.tablename] = model
-
-        for tablename, model in models.items():
-            fields = getattr(model, 'fields')
-
-            columns = []
-            for name, field in fields.items():
-                columns.append(field.get_column(name, models))
-
-            tables[tablename] = sqlalchemy.Table(tablename, metadata, *columns)
-
-        self._metadata = metadata
-        self._tables = tables
-        self._models = models
-
-    @property
-    def tables(self):
-        if not hasattr(self, '_tables'):
-            self.load()
-        return self._tables
-
-    @property
-    def models(self):
-        if not hasattr(self, '_models'):
-            self.load()
-        return self._models
-
-    @property
-    def metadata(self):
-        if not hasattr(self, '_metadata'):
-            self.load()
-        return self._metadata
+        for model_cls in self.models.values():
+            model_cls.table
 
 
 class ModelMeta(type):
     def __new__(cls, name, bases, attrs):
         model_class = super().__new__(cls, name, bases, attrs)
-        for name, field in attrs.get('fields', {}).items():
-            if field.primary_key:
-                model_class.pkname = name
+
         if 'registry' in attrs:
             model_class.database = attrs['registry'].database
+            attrs['registry'].models[name] = model_class
+
+        for name, field in attrs.get('fields', {}).items():
+            setattr(field, 'registry', attrs.get('registry'))
+            if field.primary_key:
+                model_class.pkname = name
+
         return model_class
+
+    @property
+    def table(cls):
+        if not hasattr(cls, '_table'):
+            cls._table = cls.build_table()
+        return cls._table
 
 
 class QuerySet:
@@ -100,15 +74,13 @@ class QuerySet:
 
     @property
     def table(self):
-        return self.model_cls.registry.tables[self.model_cls.tablename]
+        return self.model_cls.table
 
     @property
     def pkname(self):
         return self.model_cls.pkname
 
     def build_select_expression(self):
-        table_map = self.model_cls.registry.tables
-        model_map = self.model_cls.registry.models
         tables = [self.table]
         select_from = self.table
 
@@ -116,8 +88,8 @@ class QuerySet:
             model_cls = self.model_cls
             select_from = self.table
             for part in item.split("__"):
-                model_cls = model_map[model_cls.fields[part].to]
-                table = table_map[model_cls.tablename]
+                model_cls = model_cls.fields[part].target
+                table = model_cls.table
                 select_from = sqlalchemy.sql.join(select_from, table)
                 tables.append(table)
 
@@ -137,9 +109,6 @@ class QuerySet:
         return expr
 
     def filter(self, **kwargs):
-        table_map = self.model_cls.registry.tables
-        model_map = self.model_cls.registry.models
-
         filter_clauses = self.filter_clauses
         select_related = list(self._select_related)
 
@@ -168,9 +137,9 @@ class QuerySet:
                     # Walk the relationships to the actual model class
                     # against which the comparison is being made.
                     for part in related_parts:
-                        model_cls = model_map[model_cls.fields[part].to]
+                        model_cls = model_cls.fields[part].target
 
-                column = table_map[model_cls.tablename].columns[field_name]
+                column = model_cls.table.columns[field_name]
 
             else:
                 op = "exact"
@@ -301,9 +270,18 @@ class Model(metaclass=ModelMeta):
     def pk(self, value):
         setattr(self, self.pkname, value)
 
+    @classmethod
+    def build_table(cls):
+        tablename = cls.tablename
+        metadata = cls.registry.metadata
+        columns = []
+        for name, field in cls.fields.items():
+            columns.append(field.get_column(name))
+        return sqlalchemy.Table(tablename, metadata, *columns)
+
     @property
     def table(self):
-        return self.registry.tables[self.tablename]
+        return self.__class__.table
 
     async def update(self, **kwargs):
         # Validate the keyword arguments.
@@ -348,22 +326,20 @@ class Model(metaclass=ModelMeta):
         """
         Instantiate a model instance, given a database row.
         """
-        table_map = cls.registry.tables
-        model_map = cls.registry.models
         item = {}
 
         # Instantiate any child instances first.
         for related in select_related:
             if "__" in related:
                 first_part, remainder = related.split("__", 1)
-                model_cls = model_map[cls.fields[first_part].to]
+                model_cls = cls.fields[first_part].target
                 item[first_part] = model_cls.from_row(row, select_related=[remainder])
             else:
-                model_cls = model_map[cls.fields[related].to]
+                model_cls = cls.fields[related].target
                 item[related] = model_cls.from_row(row)
 
         # Pull out the regular column values.
-        for column in table_map[cls.tablename].columns:
+        for column in cls.table.columns:
             if column.name not in item:
                 item[column.name] = row[column]
 
@@ -373,7 +349,7 @@ class Model(metaclass=ModelMeta):
         if key in self.fields:
             # Setting a relationship to a raw pk value should set a
             # fully-fledged relationship instance, with just the pk loaded.
-            value = self.fields[key].expand_relationship(value, self.registry.models)
+            value = self.fields[key].expand_relationship(value)
         super().__setattr__(key, value)
 
     def __eq__(self, other):

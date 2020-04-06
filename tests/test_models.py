@@ -10,13 +10,7 @@ import orm
 from tests.settings import DATABASE_URL
 
 database = databases.Database(DATABASE_URL, force_rollback=True)
-models = orm.ModelRegistry(
-    database=database,
-    installed=[
-        "tests.test_models.User",
-        "tests.test_models.Product",
-    ]
-)
+models = orm.ModelRegistry(database=database)
 
 
 class User(orm.Model):
@@ -39,11 +33,10 @@ class Product(orm.Model):
     }
 
 
-models.load()
-
 @pytest.fixture(autouse=True, scope="module")
 def create_test_database():
     engine = sqlalchemy.create_engine(DATABASE_URL)
+    models.load()
     models.metadata.create_all(engine)
     yield
     models.metadata.drop_all(engine)

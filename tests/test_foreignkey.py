@@ -10,16 +10,7 @@ import orm
 from tests.settings import DATABASE_URL
 
 database = databases.Database(DATABASE_URL, force_rollback=True)
-models = orm.ModelRegistry(
-    database=database,
-    installed=[
-        "tests.test_foreignkey.Album",
-        "tests.test_foreignkey.Track",
-        "tests.test_foreignkey.Organisation",
-        "tests.test_foreignkey.Team",
-        "tests.test_foreignkey.Member",
-    ]
-)
+models = orm.ModelRegistry(database=database)
 
 
 class Album(orm.Model):
@@ -36,7 +27,7 @@ class Track(orm.Model):
     registry = models
     fields = {
         "id": orm.Integer(primary_key=True),
-        "album": orm.ForeignKey("album"),
+        "album": orm.ForeignKey("Album"),
         "title": orm.String(max_length=100),
         "position": orm.Integer(),
     }
@@ -56,7 +47,7 @@ class Team(orm.Model):
     registry = models
     fields = {
         "id": orm.Integer(primary_key=True),
-        "org": orm.ForeignKey("org"),
+        "org": orm.ForeignKey(Organisation),
         "name": orm.String(max_length=100),
     }
 
@@ -66,7 +57,7 @@ class Member(orm.Model):
     registry = models
     fields = {
         "id": orm.Integer(primary_key=True),
-        "team": orm.ForeignKey("team"),
+        "team": orm.ForeignKey(Team),
         "email": orm.String(max_length=100),
     }
 
@@ -74,6 +65,7 @@ class Member(orm.Model):
 @pytest.fixture(autouse=True, scope="module")
 def create_test_database():
     engine = sqlalchemy.create_engine(DATABASE_URL)
+    models.load()
     models.metadata.create_all(engine)
     yield
     models.metadata.drop_all(engine)

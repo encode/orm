@@ -2,6 +2,7 @@ import typing
 
 import sqlalchemy
 import typesystem
+from importlib import import_module
 
 
 class ModelField:
@@ -20,7 +21,7 @@ class ModelField:
         self.unique = unique
         self.validator = self.get_validator(**kwargs)
 
-    def get_column(self, name: str, models: dict) -> sqlalchemy.Column:
+    def get_column(self, name: str) -> sqlalchemy.Column:
         column_type = self.get_column_type()
         constraints = self.get_constraints()
         return sqlalchemy.Column(
@@ -42,7 +43,7 @@ class ModelField:
     def get_constraints(self):
         return []
 
-    def expand_relationship(self, value, models):
+    def expand_relationship(self, value):
         return value
 
 
@@ -131,25 +132,33 @@ class ForeignKey(ModelField):
         super().__init__(allow_null=allow_null)
         self.to = to
 
+    @property
+    def target(self):
+        if not hasattr(self, '_target'):
+            if isinstance(self.to, str):
+                self._target = self.registry.models[self.to]
+            else:
+                self._target = self.to
+        return self._target
+
     def get_validator(self, **kwargs) -> typesystem.Field:
         return self.ForeignKeyValidator()
 
-    def get_column(self, name: str, models: dict) -> sqlalchemy.Column:
-        to_model = models[self.to]
-        to_field = to_model.fields[to_model.pkname]
+    def get_column(self, name: str) -> sqlalchemy.Column:
+        target = self.target
+        to_field = target.fields[target.pkname]
 
         column_type = to_field.get_column_type()
-        constraints = [sqlalchemy.schema.ForeignKey(f"{self.to}.{to_model.pkname}")]
+        constraints = [sqlalchemy.schema.ForeignKey(f"{target.tablename}.{target.pkname}")]
         return sqlalchemy.Column(
             name,
             column_type,
             *constraints,
             nullable=self.allow_null,
-            index=True,
         )
 
-    def expand_relationship(self, value, models):
-        model_cls = models[self.to]
-        if isinstance(value, model_cls):
+    def expand_relationship(self, value):
+        target = self.target
+        if isinstance(value, target):
             return value
-        return model_cls(pk=value)
+        return target(pk=value)

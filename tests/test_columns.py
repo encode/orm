@@ -12,12 +12,7 @@ from tests.settings import DATABASE_URL
 
 
 database = databases.Database(DATABASE_URL, force_rollback=True)
-models = orm.ModelRegistry(
-    database=database,
-    installed=[
-        "tests.test_columns.Example",
-    ]
-)
+models = orm.ModelRegistry(database=database)
 
 def time():
     return datetime.datetime.now().time()
@@ -39,6 +34,7 @@ class Example(orm.Model):
 
 @pytest.fixture(autouse=True, scope="module")
 def create_test_database():
+    models.load()
     engine = sqlalchemy.create_engine(DATABASE_URL)
     models.metadata.create_all(engine)
     yield
