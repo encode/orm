@@ -206,7 +206,7 @@ class QuerySet:
         )
 
     async def count(self) -> int:
-        expr = self.build_select_expression()
+        expr = self.build_select_expression().alias("subquery_for_count")
         expr = sqlalchemy.func.count().select().select_from(expr)
         return await self.database.fetch_val(expr)
 
@@ -233,6 +233,14 @@ class QuerySet:
         if len(rows) > 1:
             raise MultipleMatches()
         return self.model_cls.from_row(rows[0], select_related=self._select_related)
+
+    async def first(self, **kwargs):
+        if kwargs:
+            return await self.filter(**kwargs).first()
+
+        rows = await self.limit(1).all()
+        if rows:
+            return rows[0]
 
     async def create(self, **kwargs):
         # Validate the keyword arguments.

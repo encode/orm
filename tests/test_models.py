@@ -204,3 +204,15 @@ async def test_offset():
 
         users = await User.objects.offset(1).limit(1).all()
         assert users[0].name == 'Jane'
+
+
+@async_adapter
+async def test_model_first():
+    async with database:
+        tom = await User.objects.create(name="Tom")
+        jane = await User.objects.create(name="Jane")
+
+        assert await User.objects.first() == tom
+        assert await User.objects.first(name="Jane") == jane
+        assert await User.objects.filter(name="Jane").first() == jane
+        assert await User.objects.filter(name="Lucy").first() is None
