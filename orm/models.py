@@ -6,7 +6,7 @@ import sqlalchemy
 import typesystem
 
 from orm.exceptions import MultipleMatches, NoMatch
-from orm.fields import ForeignKey
+from orm.fields import ForeignKey, String, Text
 
 
 FILTER_OPERATORS = {
@@ -23,9 +23,8 @@ FILTER_OPERATORS = {
 
 
 class ModelRegistry:
-    def __init__(self, database: databases.Database, installed: typing.Sequence[str] = None) -> None:
+    def __init__(self, database: databases.Database) -> None:
         self.database = database
-        self.installed = [] if installed is None else list(installed)
         self.metadata = sqlalchemy.MetaData()
         self.models = {}
 
@@ -59,12 +58,13 @@ class ModelMeta(type):
 class QuerySet:
     ESCAPE_CHARACTERS = ['%', '_']
 
-    def __init__(self, model_cls=None, filter_clauses=None, select_related=None, limit_count=None, offset=None):
+    def __init__(self, model_cls=None, filter_clauses=None, select_related=None, limit_count=None, offset=None, order_by=None):
         self.model_cls = model_cls
         self.filter_clauses = [] if filter_clauses is None else filter_clauses
         self._select_related = [] if select_related is None else select_related
         self.limit_count = limit_count
         self.query_offset = offset
+        self._order_by = order_by
 
     def __get__(self, instance, owner):
         return self.__class__(model_cls=owner)
@@ -76,6 +76,11 @@ class QuerySet:
     @property
     def table(self):
         return self.model_cls.table
+
+    @property
+    def schema(self):
+        fields = {key: field.validator for key, field in self.model_cls.fields.items()}
+        return typesystem.Schema(fields=fields)
 
     @property
     def pkname(self):
@@ -104,6 +109,14 @@ class QuerySet:
                 clause = sqlalchemy.sql.and_(*self.filter_clauses)
             expr = expr.where(clause)
 
+        if self._order_by is not None:
+            reverse = self._order_by.startswith("-")
+            order_by = self._order_by.lstrip("-")
+            order_col = self.table.columns[order_by]
+            if reverse:
+                order_col = order_col.desc()
+            expr = expr.order_by(order_col)
+
         if self.limit_count:
             expr = expr.limit(self.limit_count)
 
@@ -113,7 +126,7 @@ class QuerySet:
         return expr
 
     def filter(self, **kwargs):
-        filter_clauses = self.filter_clauses
+        filter_clauses = list(self.filter_clauses)
         select_related = list(self._select_related)
 
         if kwargs.get("pk"):
@@ -179,7 +192,51 @@ class QuerySet:
             filter_clauses=filter_clauses,
             select_related=select_related,
             limit_count=self.limit_count,
-            offset=self.query_offset
+            offset=self.query_offset,
+            order_by=self._order_by,
+        )
+
+    def search(self, term):
+        if not term:
+            return self
+
+        filter_clauses = list(self.filter_clauses)
+        value = f"%{term}%"
+
+        # has_escaped_character = any(c for c in self.ESCAPE_CHARACTERS if c in term)
+        # if has_escaped_character:
+        #     # enable escape modifier
+        #     for char in self.ESCAPE_CHARACTERS:
+        #         term = term.replace(char, f'\\{char}')
+        #     term = f"%{value}%"
+        #
+        # clause.modifiers['escape'] = '\\' if has_escaped_character else None
+
+        search_fields = [name for name, field in self.model_cls.fields.items() if isinstance(field, (String, Text))]
+        search_clauses = [self.table.columns[name].ilike(value) for name in search_fields]
+
+        if len(search_clauses) > 1:
+            filter_clauses.append(sqlalchemy.sql.or_(*search_clauses))
+        else:
+            filter_clauses.extend(search_clauses)
+
+        return self.__class__(
+            model_cls=self.model_cls,
+            filter_clauses=filter_clauses,
+            select_related=self._select_related,
+            limit_count=self.limit_count,
+            offset=self.query_offset,
+            order_by=self._order_by,
+        )
+
+    def order_by(self, order_by, reverse=False):
+        return self.__class__(
+            model_cls=self.model_cls,
+            filter_clauses=self.filter_clauses,
+            select_related=self._select_related,
+            limit_count=self.limit_count,
+            offset=self.query_offset,
+            order_by=order_by,
         )
 
     def select_related(self, related):
@@ -192,7 +249,8 @@ class QuerySet:
             filter_clauses=self.filter_clauses,
             select_related=related,
             limit_count=self.limit_count,
-            offset=self.query_offset
+            offset=self.query_offset,
+            order_by=self._order_by,
         )
 
     async def exists(self) -> bool:
@@ -206,9 +264,9 @@ class QuerySet:
             filter_clauses=self.filter_clauses,
             select_related=self._select_related,
             limit_count=limit_count,
-            offset=self.query_offset
+            offset=self.query_offset,
+            order_by=self._order_by,
         )
-
 
     def offset(self, offset: int):
         return self.__class__(
@@ -216,7 +274,8 @@ class QuerySet:
             filter_clauses=self.filter_clauses,
             select_related=self._select_related,
             limit_count=self.limit_count,
-            offset=offset
+            offset=offset,
+            order_by=self._order_by,
         )
 
     async def count(self) -> int:
@@ -264,11 +323,9 @@ class QuerySet:
         )
         kwargs = validator.validate(kwargs)
 
-        # Remove primary key when None to prevent not null constraint in postgresql.
-        pkname = self.pkname
-        pk = self.model_cls.fields[pkname]
-        if kwargs[pkname] is None and pk.allow_null:
-            del kwargs[pkname]
+        for key, value in fields.items():
+            if value.validator.read_only and value.validator.has_default():
+                kwargs[key] = value.validator.get_default_value()
 
         # Build the insert expression.
         expr = self.table.insert()

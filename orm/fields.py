@@ -14,7 +14,7 @@ class ModelField:
         **kwargs: typing.Any,
     ) -> None:
         if primary_key:
-            kwargs["allow_null"] = True
+            kwargs["read_only"] = True
         self.allow_null = kwargs.get("allow_null", False)
         self.primary_key = primary_key
         self.index = index
