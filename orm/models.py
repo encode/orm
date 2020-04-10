@@ -25,12 +25,17 @@ FILTER_OPERATORS = {
 class ModelRegistry:
     def __init__(self, database: databases.Database) -> None:
         self.database = database
-        self.metadata = sqlalchemy.MetaData()
         self.models = {}
+        self._metadata = sqlalchemy.MetaData()
+        self._loaded = False
 
-    def load(self):
-        for model_cls in self.models.values():
-            model_cls.table
+    @property
+    def metadata(self):
+        if not self._loaded:
+            for model_cls in self.models.values():
+                model_cls.table
+            self._loaded = True
+        return self._metadata
 
 
 class ModelMeta(type):
@@ -229,7 +234,7 @@ class QuerySet:
             order_by=self._order_by,
         )
 
-    def order_by(self, order_by, reverse=False):
+    def order_by(self, order_by):
         return self.__class__(
             model_cls=self.model_cls,
             filter_clauses=self.filter_clauses,
@@ -359,7 +364,7 @@ class Model(metaclass=ModelMeta):
     @classmethod
     def build_table(cls):
         tablename = cls.tablename
-        metadata = cls.registry.metadata
+        metadata = cls.registry._metadata
         columns = []
         for name, field in cls.fields.items():
             columns.append(field.get_column(name))

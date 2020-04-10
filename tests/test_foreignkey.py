@@ -65,7 +65,6 @@ class Member(orm.Model):
 @pytest.fixture(autouse=True, scope="module")
 def create_test_database():
     engine = sqlalchemy.create_engine(DATABASE_URL)
-    models.load()
     models.metadata.create_all(engine)
     yield
     models.metadata.drop_all(engine)

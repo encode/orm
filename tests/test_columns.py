@@ -34,7 +34,6 @@ class Example(orm.Model):
 
 @pytest.fixture(autouse=True, scope="module")
 def create_test_database():
-    models.load()
     engine = sqlalchemy.create_engine(DATABASE_URL)
     models.metadata.create_all(engine)
     yield
