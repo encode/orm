@@ -14,7 +14,6 @@ models = orm.ModelRegistry(database=database)
 
 
 class Album(orm.Model):
-    tablename = "album"
     registry = models
     fields = {
         "id": orm.Integer(primary_key=True),
@@ -23,7 +22,6 @@ class Album(orm.Model):
 
 
 class Track(orm.Model):
-    tablename = "track"
     registry = models
     fields = {
         "id": orm.Integer(primary_key=True),
@@ -34,7 +32,6 @@ class Track(orm.Model):
 
 
 class Organisation(orm.Model):
-    tablename = "org"
     registry = models
     fields = {
         "id": orm.Integer(primary_key=True),
@@ -43,7 +40,6 @@ class Organisation(orm.Model):
 
 
 class Team(orm.Model):
-    tablename = "team"
     registry = models
     fields = {
         "id": orm.Integer(primary_key=True),
@@ -53,7 +49,6 @@ class Team(orm.Model):
 
 
 class Member(orm.Model):
-    tablename = "member"
     registry = models
     fields = {
         "id": orm.Integer(primary_key=True),

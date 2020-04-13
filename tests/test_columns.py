@@ -19,7 +19,6 @@ def time():
 
 
 class Example(orm.Model):
-    tablename = "example"
     registry = models
     fields = {
         "id": orm.Integer(primary_key=True),

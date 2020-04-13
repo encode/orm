@@ -46,6 +46,9 @@ class ModelMeta(type):
             model_class.database = attrs['registry'].database
             attrs['registry'].models[name] = model_class
 
+            if 'tablename' not in attrs:
+                setattr(model_class, 'tablename', name.lower())
+
         for name, field in attrs.get('fields', {}).items():
             setattr(field, 'registry', attrs.get('registry'))
             if field.primary_key:
