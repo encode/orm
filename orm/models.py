@@ -1,3 +1,4 @@
+import asyncio
 import typing
 from abc import ABCMeta
 
@@ -36,6 +37,24 @@ class ModelRegistry:
                 model_cls.table
             self._loaded = True
         return self._metadata
+
+    def create_all(self):
+        asyncio.run(self._create_all())
+
+    def drop_all(self):
+        asyncio.run(self._drop_all())
+
+    async def _create_all(self):
+        async with self.database as database:
+            for model_cls in self.models.values():
+                expr = sqlalchemy.schema.CreateTable(model_cls.table)
+                await self.database.execute(str(expr))
+
+    async def _drop_all(self):
+        async with self.database as database:
+            for model_cls in self.models.values():
+                expr = sqlalchemy.schema.DropTable(model_cls.table)
+                await self.database.execute(str(expr))
 
 
 class ModelMeta(type):

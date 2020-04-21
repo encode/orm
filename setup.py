@@ -50,7 +50,7 @@ setup(
     packages=get_packages(PACKAGE),
     package_data={PACKAGE: ["py.typed"]},
     data_files=[("", ["LICENSE.md"])],
-    install_requires=["databases>=0.2.1", "typesystem"],
+    install_requires=["databases>=0.3.0", "typesystem"],
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Environment :: Web Environment",

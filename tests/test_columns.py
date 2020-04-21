@@ -11,7 +11,7 @@ import orm
 from tests.settings import DATABASE_URL
 
 
-database = databases.Database(DATABASE_URL, force_rollback=True)
+database = databases.Database(DATABASE_URL)
 models = orm.ModelRegistry(database=database)
 
 def time():
@@ -33,39 +33,30 @@ class Example(orm.Model):
 
 @pytest.fixture(autouse=True, scope="module")
 def create_test_database():
-    engine = sqlalchemy.create_engine(DATABASE_URL)
-    models.metadata.create_all(engine)
+    models.create_all()
     yield
-    models.metadata.drop_all(engine)
+    models.drop_all()
 
 
-def async_adapter(wrapped_func):
-    """
-    Decorator used to run async test cases.
-    """
-
-    @functools.wraps(wrapped_func)
-    def run_sync(*args, **kwargs):
-        loop = asyncio.get_event_loop()
-        task = wrapped_func(*args, **kwargs)
-        return loop.run_until_complete(task)
-
-    return run_sync
+@pytest.fixture(autouse=True)
+async def rollback_transactions():
+    with database.force_rollback():
+        async with database:
+            yield
 
 
-@async_adapter
+@pytest.mark.asyncio
 async def test_model_crud():
-    async with database:
-        await Example.objects.create()
+    await Example.objects.create()
 
-        example = await Example.objects.get()
-        assert example.created.year == datetime.datetime.now().year
-        assert example.created_day == datetime.date.today()
-        assert example.description == ''
-        assert example.value is None
-        assert example.data == {}
+    example = await Example.objects.get()
+    assert example.created.year == datetime.datetime.now().year
+    assert example.created_day == datetime.date.today()
+    assert example.description == ''
+    assert example.value is None
+    assert example.data == {}
 
-        await example.update(data={"foo": 123}, value=123.456)
-        example = await Example.objects.get()
-        assert example.value == 123.456
-        assert example.data == {"foo": 123}
+    await example.update(data={"foo": 123}, value=123.456)
+    example = await Example.objects.get()
+    assert example.value == 123.456
+    assert example.data == {"foo": 123}
