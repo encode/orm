@@ -216,3 +216,24 @@ async def test_model_first():
         assert await User.objects.first(name="Jane") == jane
         assert await User.objects.filter(name="Jane").first() == jane
         assert await User.objects.filter(name="Lucy").first() is None
+
+@async_adapter
+async def test_pagination():
+    from random import choice  # noqa
+
+    users = (choice(["Jane", "Tom", "Carla", "Pau", "Pedro"]) for _ in range(30))
+    for user in users:
+        await User.objects.create(name=user)
+
+    per_page = 10
+    page = await User.objects.paginate(1, per_page)
+    assert page.next_num == 2
+    assert page.has_next == True
+    assert page.has_prev == False
+    assert page.pages == 3
+    first_item_id = 1
+    async for page in page.iterate():
+        assert page.items[0]["id"] == first_item_id
+        first_item_id += per_page
+    assert page.has_next == False
+    assert page.next_num == None

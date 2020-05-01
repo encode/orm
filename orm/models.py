@@ -266,6 +266,14 @@ class QuerySet:
         instance.pk = await self.database.execute(expr)
         return instance
 
+    async def paginate(self, page:int = 1, per_page: int = 10):
+        items = await self.limit(per_page).offset((page - 1) * per_page).all()
+        if page == 1 and len(items) < per_page:
+            total = len(items)
+        else:
+            total = await self.count()
+        return _Pagination(self, page, per_page, total, items)
+
 
 class Model(typesystem.Schema, metaclass=ModelMetaclass):
     __abstract__ = True
@@ -353,3 +361,52 @@ class Model(typesystem.Schema, metaclass=ModelMetaclass):
             # fully-fledged relationship instance, with just the pk loaded.
             value = self.fields[key].expand_relationship(value)
         super().__setattr__(key, value)
+
+
+class _Pagination:
+    def __init__(self, query, page, per_page, total, items):
+        self.query = query
+        self.page = page
+        self.per_page = per_page
+        self.total = total
+        self.items = items
+
+    @property
+    def pages(self):
+        return int(math.ceil(self.total / float(self.per_page)))
+
+    @property
+    def prev_num(self):
+        if not self.has_prev:
+            return None
+        return self.page - 1
+
+    @property
+    def has_prev(self):
+        return self.page > 1
+
+    @property
+    def has_next(self):
+        return self.page < self.pages
+
+    @property
+    def next_num(self):
+        if not self.has_next:
+            return None
+        return self.page + 1
+
+    async def next(self):
+        if self.has_next:
+            return await self.query.paginate(self.page + 1, self.per_page)
+        return await self.query.paginate(self.page, self.per_page)
+
+    async def prev(self):
+        if self.has_prev:
+            return await self.query.paginate(self.page - 1, self.per_page)
+        return await self.query.paginate(self.page, self.per_page)
+
+    async def iterate(self):
+        yield await self.prev()
+        while self.has_next:
+            yield await self.next()
+            self.page += 1
