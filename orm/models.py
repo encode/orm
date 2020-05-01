@@ -403,7 +403,7 @@ class _Pagination:
         return await self.query.paginate(self.page - 1, self.per_page)
 
     async def iterate(self):
-        yield await self.prev()
+        yield self
         while self.has_next:
             yield await self.next()
             self.page += 1
