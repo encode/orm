@@ -235,5 +235,8 @@ async def test_pagination():
     async for page in page.iterate():
         assert page.items[0]["id"] == first_item_id
         first_item_id += per_page
+    # Ensures that we loop across all pages
     assert page.has_next == False
     assert page.next_num == None
+    after_last_page = await page.next()
+    assert len(after_last_page.items) == 0

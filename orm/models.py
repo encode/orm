@@ -1,4 +1,5 @@
 import typing
+import math
 
 import sqlalchemy
 import typesystem
@@ -396,14 +397,10 @@ class _Pagination:
         return self.page + 1
 
     async def next(self):
-        if self.has_next:
-            return await self.query.paginate(self.page + 1, self.per_page)
-        return await self.query.paginate(self.page, self.per_page)
+        return await self.query.paginate(self.page + 1, self.per_page)
 
     async def prev(self):
-        if self.has_prev:
-            return await self.query.paginate(self.page - 1, self.per_page)
-        return await self.query.paginate(self.page, self.per_page)
+        return await self.query.paginate(self.page - 1, self.per_page)
 
     async def iterate(self):
         yield await self.prev()
