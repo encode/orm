@@ -95,10 +95,10 @@ class QuerySet:
         return expr
 
     def filter(self, **kwargs):
-        return self._parse_filters(kwargs)
+        return self._filter_query(kwargs)
 
     def exclude(self, **kwargs):
-        return self._parse_filters(kwargs, exclude=True)
+        return self._filter_query(kwargs, exclude=True)
 
     def _filter_query(self, filters, exclude=False):
         filter_clauses = self.filter_clauses
