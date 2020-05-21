@@ -100,7 +100,7 @@ class QuerySet:
     def exclude(self, **kwargs):
         return self._parse_filters(kwargs, exclude=True)
 
-    def _parse_filters(self, filters, exclude=False):
+    def _filter_query(self, filters, exclude=False):
         filter_clauses = self.filter_clauses
         select_related = list(self._select_related)
 
