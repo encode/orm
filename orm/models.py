@@ -266,6 +266,28 @@ class QuerySet:
         instance.pk = await self.database.execute(expr)
         return instance
 
+    async def bulk_create(self, objs):
+        # Validate the keyword arguments.
+        fields = self.model_cls.fields
+        required = [key for key, value in fields.items() if not value.has_default()]
+        validator = typesystem.Object(
+            properties=fields, required=required, additional_properties=False
+        )
+        validated_objs = [validator.validate(o) for o in objs]
+
+        # Remove primary key when None to prevent not null constraint in postgresql.
+        pkname = self.model_cls.__pkname__
+        pk = self.model_cls.fields[pkname]
+        for obj in validated_objs:
+            if obj[pkname] is None and pk.allow_null:
+                del obj[pkname]
+
+        # Build the insert expression.
+        expr = self.table.insert()
+
+        # Execute the insert, and return a new model instance.
+        return await self.database.execute_many(expr, validated_objs)
+
 
 class Model(typesystem.Schema, metaclass=ModelMetaclass):
     __abstract__ = True
