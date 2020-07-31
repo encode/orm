@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import functools
 
 import pytest
@@ -20,6 +21,7 @@ class User(orm.Model):
 
     id = orm.Integer(primary_key=True)
     name = orm.String(max_length=100)
+    timestamp = orm.DateTime(allow_null=True)
 
 
 class Product(orm.Model):
@@ -56,11 +58,12 @@ def async_adapter(wrapped_func):
 
 
 def test_model_class():
-    assert list(User.fields.keys()) == ["id", "name"]
+    assert list(User.fields.keys()) == ["id", "name", "timestamp"]
     assert isinstance(User.fields["id"], orm.Integer)
     assert User.fields["id"].primary_key is True
     assert isinstance(User.fields["name"], orm.String)
     assert User.fields["name"].max_length == 100
+    assert isinstance(User.fields["timestamp"], orm.DateTime)
     assert isinstance(User.__table__, sqlalchemy.Table)
 
 
@@ -155,6 +158,49 @@ async def test_model_filter():
 
         products = Product.objects.filter(name__icontains="%")
         assert await products.count() == 3
+
+
+@async_adapter
+async def test_model_order_by():
+    async with database:
+        await User.objects.create(name="Tom")
+        await User.objects.create(name="Allen")
+        await User.objects.create(name="Bob")
+        users = await User.objects.order_by("name").all()
+        assert len(users) == 3
+        assert users[0].name == "Allen"
+        assert users[1].name == "Bob"
+        assert users[2].name == "Tom"
+
+
+@async_adapter
+async def test_model_order_by_desc():
+    async with database:
+        await User.objects.create(name="Tom")
+        await User.objects.create(name="Allen")
+        await User.objects.create(name="Bob")
+        users = await User.objects.order_by("-name").all()
+        assert len(users) == 3
+        assert users[0].name == "Tom"
+        assert users[1].name == "Bob"
+        assert users[2].name == "Allen"
+
+
+@async_adapter
+async def test_model_order_by_multi():
+    async with database:
+        await User.objects.create(name="Tom", timestamp=datetime.datetime(2020, 1, 1))
+        await User.objects.create(name="Tom", timestamp=datetime.datetime(2020, 7, 1))
+        await User.objects.create(name="Allen", timestamp=datetime.datetime(2020, 6, 1))
+        await User.objects.create(name="Acker", timestamp=datetime.datetime(2020, 12, 1))
+        users = await User.objects.order_by("name", "-timestamp").all()
+        assert len(users) == 4
+        assert users[0].name == "Acker"
+        assert users[1].name == "Allen"
+        assert users[2].name == "Tom"
+        assert users[2].timestamp == datetime.datetime(2020, 7, 1)
+        assert users[3].name == "Tom"
+        assert users[3].timestamp == datetime.datetime(2020, 1, 1)
 
 
 @async_adapter

@@ -50,8 +50,9 @@ class ModelMetaclass(SchemaMetaclass):
 
 class QuerySet:
     ESCAPE_CHARACTERS = ['%', '_']
-    def __init__(self, model_cls=None, filter_clauses=None, select_related=None, limit_count=None, offset=None):
+    def __init__(self, model_cls=None, filter_clauses=None, select_related=None, limit_count=None, offset=None, order_args=None):
         self.model_cls = model_cls
+        self.order_args = [] if order_args is None else order_args
         self.filter_clauses = [] if filter_clauses is None else filter_clauses
         self._select_related = [] if select_related is None else select_related
         self.limit_count = limit_count
@@ -89,6 +90,10 @@ class QuerySet:
             else:
                 clause = sqlalchemy.sql.and_(*self.filter_clauses)
             expr = expr.where(clause)
+
+        if self.order_args:
+            order_args = self._prepared_order()
+            expr = expr.order_by(*order_args)
 
         if self.limit_count:
             expr = expr.limit(self.limit_count)
@@ -179,6 +184,26 @@ class QuerySet:
             select_related=related,
             limit_count=self.limit_count,
             offset=self.query_offset
+        )
+
+    def _prepared_order(self):
+        prepared = []
+        for order in self.order_args:
+            desc = order.startswith('-')
+            col_name = order.lstrip('-') if desc else order
+            col = self.model_cls.__table__.columns[col_name]
+            prepared.append(col.desc() if desc else col)
+
+        return prepared
+
+    def order_by(self, *args):
+        return self.__class__(
+            model_cls=self.model_cls,
+            filter_clauses=self.filter_clauses,
+            select_related=self._select_related,
+            limit_count=self.limit_count,
+            offset=self.query_offset,
+            order_args=args,
         )
 
     async def exists(self) -> bool:
