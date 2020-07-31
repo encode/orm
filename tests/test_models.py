@@ -216,3 +216,15 @@ async def test_model_first():
         assert await User.objects.first(name="Jane") == jane
         assert await User.objects.filter(name="Jane").first() == jane
         assert await User.objects.filter(name="Lucy").first() is None
+
+
+@async_adapter
+async def test_model_bulk_create():
+    async with database:
+        await User.objects.bulk_create([
+            User(name="Tom"),
+            User(name="Jane"),
+            User(name="Lucy"),
+        ])
+
+        assert await User.objects.count() == 3
