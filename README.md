@@ -39,7 +39,6 @@ class Note(orm.Model):
     __tablename__ = "notes"
     __database__ = database
     __metadata__ = metadata
-
     id = orm.Integer(primary_key=True)
     text = orm.String(max_length=100)
     completed = orm.Boolean(default=False)
@@ -52,6 +51,13 @@ metadata.create_all(engine)
 await Note.objects.create(text="Buy the groceries.", completed=False)
 await Note.objects.create(text="Call Mum.", completed=True)
 await Note.objects.create(text="Send invoices.", completed=True)
+
+# .bulk_create()
+await Note.objects.bulk_create([
+    Note(text="Buy the groceries.", completed=False),
+    Note(text="Call Mum.", completed=True),
+    Note(text="Send invoices.", completed=True),
+])
 
 # .all()
 notes = await Note.objects.all()
