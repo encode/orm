@@ -34,6 +34,7 @@ class ModelMetaclass(SchemaMetaclass):
 
         tablename = attrs["__tablename__"]
         metadata = attrs["__metadata__"]
+        table_args = attrs.get("__table_args__", [])
         pkname = None
 
         columns = []
@@ -41,6 +42,7 @@ class ModelMetaclass(SchemaMetaclass):
             if field.primary_key:
                 pkname = name
             columns.append(field.get_column(name))
+        columns.extend(table_args)
 
         new_model.__table__ = sqlalchemy.Table(tablename, metadata, *columns)
         new_model.__pkname__ = pkname

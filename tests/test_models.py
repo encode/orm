@@ -33,6 +33,17 @@ class Product(orm.Model):
     in_stock = orm.Boolean(default=False)
 
 
+class Channel(orm.Model):
+    __tablename__ = "channels"
+    __metadata__ = metadata
+    __database__ = database
+    __table_args__ = (sqlalchemy.schema.UniqueConstraint('name', 'number'),)
+
+    id = orm.Integer(primary_key=True)
+    name = orm.String(max_length=100)
+    number = orm.Integer()
+
+
 @pytest.fixture(autouse=True, scope="module")
 def create_test_database():
     engine = sqlalchemy.create_engine(DATABASE_URL)
@@ -216,3 +227,15 @@ async def test_model_first():
         assert await User.objects.first(name="Jane") == jane
         assert await User.objects.filter(name="Jane").first() == jane
         assert await User.objects.filter(name="Lucy").first() is None
+
+
+@async_adapter
+async def test_constraints_multi_column():
+    async with database:
+        await Channel.objects.create(name='PBS', number=1)
+        await Channel.objects.create(name='PBS', number=2)
+        await Channel.objects.create(name='CSPAN', number=2)
+
+        from sqlite3 import IntegrityError
+        with pytest.raises(IntegrityError):
+            await Channel.objects.create(name='PBS', number=1)
