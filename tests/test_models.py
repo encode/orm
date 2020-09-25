@@ -1,12 +1,11 @@
 import asyncio
 import functools
 
+import databases
 import pytest
 import sqlalchemy
 
-import databases
 import orm
-
 from tests.settings import DATABASE_URL
 
 database = databases.Database(DATABASE_URL, force_rollback=True)
@@ -193,7 +192,7 @@ async def test_model_limit_with_filter():
         await User.objects.create(name="Tom")
         await User.objects.create(name="Tom")
 
-        assert len(await User.objects.limit(2).filter(name__iexact='Tom').all()) == 2
+        assert len(await User.objects.limit(2).filter(name__iexact="Tom").all()) == 2
 
 
 @async_adapter
@@ -203,7 +202,7 @@ async def test_offset():
         await User.objects.create(name="Jane")
 
         users = await User.objects.offset(1).limit(1).all()
-        assert users[0].name == 'Jane'
+        assert users[0].name == "Jane"
 
 
 @async_adapter
@@ -216,3 +215,17 @@ async def test_model_first():
         assert await User.objects.first(name="Jane") == jane
         assert await User.objects.filter(name="Jane").first() == jane
         assert await User.objects.filter(name="Lucy").first() is None
+
+
+@async_adapter
+async def test_as_dict():
+    async with database:
+        tom = await User.objects.create(name="Tom")
+        jane = await User.objects.create(name="Jane")
+        users = await User.objects.all()
+
+        assert await tom.as_dict() == {"id": 1, "name": "Tom"}
+        assert await users.as_dict() == [
+            {"id": 1, "name": "Tom"},
+            {"id": 2, "name": "Jane"},
+        ]
