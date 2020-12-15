@@ -144,7 +144,7 @@ class QuerySet:
             op_attr = FILTER_OPERATORS[op]
             has_escaped_character = False
 
-            if op in ["contains", "icontains"]:
+            if op in ["iexact", "contains", "icontains"]:
                 has_escaped_character = any(c for c in self.ESCAPE_CHARACTERS
                                             if c in value)
                 if has_escaped_character:
