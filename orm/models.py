@@ -13,6 +13,7 @@ FILTER_OPERATORS = {
     "iexact": "ilike",
     "contains": "like",
     "icontains": "ilike",
+    "like": "like",
     "in": "in_",
     "gt": "__gt__",
     "gte": "__ge__",
