@@ -62,6 +62,11 @@ class Integer(ModelField, typesystem.Integer):
         return sqlalchemy.Integer()
 
 
+class BigInteger(ModelField, typesystem.Integer):
+    def get_column_type(self):
+        return sqlalchemy.BigInteger()
+
+
 class Float(ModelField, typesystem.Float):
     def get_column_type(self):
         return sqlalchemy.Float()

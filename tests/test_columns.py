@@ -25,6 +25,7 @@ class Example(orm.Model):
     __database__ = database
 
     id = orm.Integer(primary_key=True)
+    huge_number = orm.BigInteger(default=999999999999999999)
     created = orm.DateTime(default=datetime.datetime.now)
     created_day = orm.Date(default=datetime.date.today)
     created_time = orm.Time(default=time)
@@ -61,6 +62,7 @@ async def test_model_crud():
         await Example.objects.create()
 
         example = await Example.objects.get()
+        assert example.huge_number == 999999999999999999
         assert example.created.year == datetime.datetime.now().year
         assert example.created_day == datetime.date.today()
         assert example.description == ''
