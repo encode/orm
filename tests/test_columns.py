@@ -1,12 +1,17 @@
 import asyncio
 import datetime
 import functools
+from orm.fields import UUIDField
 
 import pytest
 import sqlalchemy
+from sqlalchemy.dialects import postgresql
+from sqlalchemy.dialects.postgresql.psycopg2 import _PGUUID
 
 import databases
 import orm
+
+import uuid
 
 from tests.settings import DATABASE_URL
 
@@ -31,6 +36,7 @@ class Example(orm.Model):
     description = orm.Text(allow_blank=True)
     value = orm.Float(allow_null=True)
     data = orm.JSON(default={})
+    uuid = orm.UUID(default=uuid.uuid4())
 
 
 @pytest.fixture(autouse=True, scope="module")
@@ -58,7 +64,9 @@ def async_adapter(wrapped_func):
 @async_adapter
 async def test_model_crud():
     async with database:
-        await Example.objects.create()
+        _uuid = uuid.uuid4()
+
+        await Example.objects.create(uuid=_uuid)
 
         example = await Example.objects.get()
         assert example.created.year == datetime.datetime.now().year
@@ -66,8 +74,26 @@ async def test_model_crud():
         assert example.description == ''
         assert example.value is None
         assert example.data == {}
+        assert isinstance(example.uuid, uuid.UUID)
+        assert example.uuid == _uuid
 
-        await example.update(data={"foo": 123}, value=123.456)
+        await example.update(data={"foo": 123}, value=123.456, uuid=uuid.uuid4())
         example = await Example.objects.get()
         assert example.value == 123.456
         assert example.data == {"foo": 123}
+        assert example.uuid != _uuid
+
+
+def test_uuid_field():
+    type = UUIDField()
+    assert isinstance(type.load_dialect_impl(postgresql.dialect()), _PGUUID)
+    data = uuid.uuid4()
+
+    assert type.process_bind_param(data, postgresql.dialect()) == str(data)
+    assert type.process_bind_param(str(data), postgresql.dialect()) == str(data)
+    assert type.process_bind_param(int(data), postgresql.dialect()) == str(data)
+    assert type.process_bind_param(data.bytes, postgresql.dialect()) == str(data)
+    assert type.process_bind_param(None, postgresql.dialect()) == None
+
+    assert type.process_result_value(str(data), postgresql.dialect()) == data
+    assert type.process_result_value(None, postgresql.dialect()) == None

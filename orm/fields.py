@@ -1,6 +1,10 @@
 import typing
 
 import sqlalchemy
+from sqlalchemy.types import TypeDecorator
+from sqlalchemy import BINARY
+from sqlalchemy.dialects.postgresql import UUID as pgUUID
+import uuid
 import typesystem
 
 
@@ -41,6 +45,43 @@ class ModelField:
 
     def expand_relationship(self, value):
         return value
+
+
+class UUIDField(TypeDecorator):
+
+    impl = BINARY
+
+    def load_dialect_impl(self, dialect):
+        if dialect.name == 'postgresql':
+            return dialect.type_descriptor(pgUUID())
+
+        return dialect.type_descriptor(BINARY(16))
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return
+
+        if not isinstance(value, uuid.UUID):
+            if isinstance(value, bytes):
+                value = uuid.UUID(bytes=value)
+            elif isinstance(value, int):
+                value = uuid.UUID(int=value)
+            elif isinstance(value, str):
+                value = uuid.UUID(value)
+
+        if dialect.name == 'postgresql':
+            return str(value)
+
+        return value.bytes
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return
+
+        if dialect.name == 'postgresql':
+            return uuid.UUID(value)
+
+        return uuid.UUID(bytes=value)
 
 
 class String(ModelField, typesystem.String):
@@ -90,6 +131,11 @@ class Time(ModelField, typesystem.Time):
 class JSON(ModelField, typesystem.Any):
     def get_column_type(self):
         return sqlalchemy.JSON()
+
+
+class UUID(ModelField, typesystem.Any):
+    def get_column_type(self):
+        return UUIDField()
 
 
 class ForeignKey(ModelField, typesystem.Field):
