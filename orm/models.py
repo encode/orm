@@ -5,7 +5,6 @@ import typesystem
 from typesystem.schemas import SchemaMetaclass
 
 from orm.exceptions import MultipleMatches, NoMatch
-from orm.fields import ForeignKey
 
 
 FILTER_OPERATORS = {
@@ -50,6 +49,7 @@ class ModelMetaclass(SchemaMetaclass):
 
 class QuerySet:
     ESCAPE_CHARACTERS = ['%', '_']
+
     def __init__(self, model_cls=None, filter_clauses=None, select_related=None, limit_count=None, offset=None):
         self.model_cls = model_cls
         self.filter_clauses = [] if filter_clauses is None else filter_clauses
@@ -194,7 +194,6 @@ class QuerySet:
             limit_count=limit_count,
             offset=self.query_offset
         )
-
 
     def offset(self, offset: int):
         return self.__class__(

@@ -10,6 +10,7 @@ from setuptools import setup
 PACKAGE = "orm"
 URL = "https://github.com/encode/orm"
 
+
 def get_version(package):
     """
     Return package version as listed in `__version__` in `init.py`.

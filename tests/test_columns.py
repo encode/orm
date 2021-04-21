@@ -36,7 +36,8 @@ class Example(orm.Model):
     description = orm.Text(allow_blank=True)
     value = orm.Float(allow_null=True)
     data = orm.JSON(default={})
-    uuid = orm.UUID(default=uuid.uuid4())
+    uuid1 = orm.UUID(default=uuid.uuid4(), as_uuid=True)
+    uuid2 = orm.UUID(default=uuid.uuid4(), as_uuid=False)
 
 
 @pytest.fixture(autouse=True, scope="module")
@@ -66,7 +67,7 @@ async def test_model_crud():
     async with database:
         _uuid = uuid.uuid4()
 
-        await Example.objects.create(uuid=_uuid)
+        await Example.objects.create(uuid1=_uuid, uuid2=_uuid)
 
         example = await Example.objects.get()
         assert example.created.year == datetime.datetime.now().year
@@ -74,18 +75,20 @@ async def test_model_crud():
         assert example.description == ''
         assert example.value is None
         assert example.data == {}
-        assert isinstance(example.uuid, uuid.UUID)
-        assert example.uuid == _uuid
+        assert isinstance(example.uuid1, uuid.UUID)
+        assert example.uuid1 == _uuid
+        assert isinstance(example.uuid2, str)
+        assert example.uuid2 == str(_uuid)
 
-        await example.update(data={"foo": 123}, value=123.456, uuid=uuid.uuid4())
+        await example.update(data={"foo": 123}, value=123.456, uuid1=uuid.uuid4())
         example = await Example.objects.get()
         assert example.value == 123.456
         assert example.data == {"foo": 123}
-        assert example.uuid != _uuid
+        assert example.uuid1 != _uuid
 
 
 def test_uuid_field():
-    type = UUIDField()
+    type = UUIDField(as_uuid=False)
     assert isinstance(type.load_dialect_impl(postgresql.dialect()), _PGUUID)
     data = uuid.uuid4()
 
@@ -93,7 +96,11 @@ def test_uuid_field():
     assert type.process_bind_param(str(data), postgresql.dialect()) == str(data)
     assert type.process_bind_param(int(data), postgresql.dialect()) == str(data)
     assert type.process_bind_param(data.bytes, postgresql.dialect()) == str(data)
-    assert type.process_bind_param(None, postgresql.dialect()) == None
+    assert type.process_bind_param(None, postgresql.dialect()) is None
 
-    assert type.process_result_value(str(data), postgresql.dialect()) == data
-    assert type.process_result_value(None, postgresql.dialect()) == None
+    assert type.process_result_value(str(data), postgresql.dialect()) == str(data)
+    assert type.process_result_value(None, postgresql.dialect()) is None
+
+    type = UUIDField(as_uuid=True)
+
+    assert type.process_result_value(data.bytes, postgresql.dialect()) == data

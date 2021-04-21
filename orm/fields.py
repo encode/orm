@@ -51,6 +51,10 @@ class UUIDField(TypeDecorator):
 
     impl = BINARY
 
+    def __init__(self, *args: typing.Any, as_uuid: bool = True, **kwargs: typing.Any) -> None:
+        self.as_uuid = as_uuid
+        super().__init__(*args, **kwargs)
+
     def load_dialect_impl(self, dialect):
         if dialect.name == 'postgresql':
             return dialect.type_descriptor(pgUUID())
@@ -79,9 +83,14 @@ class UUIDField(TypeDecorator):
             return
 
         if dialect.name == 'postgresql':
-            return uuid.UUID(value)
+            if isinstance(value, str) and not self.as_uuid:
+                return value
+            return uuid.UUID(bytes=value)
 
-        return uuid.UUID(bytes=value)
+        if self.as_uuid:
+            return uuid.UUID(bytes=value)
+
+        return str(uuid.UUID(bytes=value))
 
 
 class String(ModelField, typesystem.String):
@@ -134,8 +143,12 @@ class JSON(ModelField, typesystem.Any):
 
 
 class UUID(ModelField, typesystem.Any):
+    def __init__(self, as_uuid: bool,  **kwargs):
+        self.as_uuid = as_uuid
+        super().__init__(**kwargs)
+
     def get_column_type(self):
-        return UUIDField()
+        return UUIDField(as_uuid=self.as_uuid)
 
 
 class ForeignKey(ModelField, typesystem.Field):
