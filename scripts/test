@@ -1,15 +1,18 @@
-#!/bin/sh -e
+#!/bin/sh
 
-PACKAGE="orm"
-
-PREFIX=""
+export PREFIX=""
 if [ -d 'venv' ] ; then
-    PREFIX="venv/bin/"
+    export PREFIX="venv/bin/"
 fi
 
-set -x
+set -ex
 
-PYTHONPATH=. ${PREFIX}pytest --ignore venv --cov=${PACKAGE} --cov=tests --cov-fail-under=100 --cov-report=term-missing ${@}
-#${PREFIX}mypy ${PACKAGE} --ignore-missing-imports --disallow-untyped-defs
-#${PREFIX}autoflake --recursive ${PACKAGE} tests
-#${PREFIX}black ${PACKAGE} tests --check
+if [ -z $GITHUB_ACTIONS ]; then
+    scripts/check
+fi
+
+${PREFIX}coverage run -m pytest $@
+
+if [ -z $GITHUB_ACTIONS ]; then
+    scripts/coverage
+fi

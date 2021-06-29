@@ -5,6 +5,7 @@ typesystem
 autoflake
 black
 codecov
+flake8
 isort
 mypy
 pytest
