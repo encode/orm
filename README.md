@@ -1,8 +1,8 @@
 # ORM
 
 <p>
-<a href="https://travis-ci.org/encode/orm">
-    <img src="https://travis-ci.org/encode/orm.svg?branch=master" alt="Build Status">
+<a href="https://github.com/encode/orm/actions">
+    <img src="https://github.com/encode/orm/workflows/Test%20Suite/badge.svg" alt="Build Status">
 </a>
 <a href="https://codecov.io/gh/encode/orm">
     <img src="https://codecov.io/gh/encode/orm/branch/master/graph/badge.svg" alt="Coverage">
