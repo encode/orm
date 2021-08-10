@@ -1,6 +1,10 @@
 databases[sqlite]
 typesystem
 
+# Packaging
+twine
+wheel
+
 # Testing
 autoflake
 black
