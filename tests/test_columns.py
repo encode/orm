@@ -2,14 +2,12 @@ import asyncio
 import datetime
 import functools
 
+import databases
 import pytest
 import sqlalchemy
 
-import databases
 import orm
-
 from tests.settings import DATABASE_URL
-
 
 database = databases.Database(DATABASE_URL, force_rollback=True)
 metadata = sqlalchemy.MetaData()
@@ -63,7 +61,7 @@ async def test_model_crud():
         example = await Example.objects.get()
         assert example.created.year == datetime.datetime.now().year
         assert example.created_day == datetime.date.today()
-        assert example.description == ''
+        assert example.description == ""
         assert example.value is None
         assert example.data == {}
 
