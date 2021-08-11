@@ -75,7 +75,9 @@ async def test_model_crud():
         assert example.data == {}
         assert example.status == StatusEnum.DRAFT
 
-        await example.update(data={"foo": 123}, value=123.456, status=StatusEnum.RELEASED)
+        await example.update(
+            data={"foo": 123}, value=123.456, status=StatusEnum.RELEASED
+        )
         example = await Example.objects.get()
         assert example.value == 123.456
         assert example.data == {"foo": 123}
