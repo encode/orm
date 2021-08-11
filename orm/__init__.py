@@ -1,20 +1,32 @@
 from orm.exceptions import MultipleMatches, NoMatch
-from orm.fields import Boolean, BigInteger, Integer, Float, String, Text, Date, Time, DateTime, JSON, ForeignKey
+from orm.fields import (
+    JSON,
+    BigInteger,
+    Boolean,
+    Date,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    Time,
+)
 from orm.models import Model
 
-__version__ = "0.1.4"
+__version__ = "0.1.5"
 __all__ = [
     "NoMatch",
     "MultipleMatches",
     "BigInteger",
     "Boolean",
-    "Integer",
+    "Date",
+    "DateTime",
     "Float",
+    "Integer",
     "String",
     "Text",
-    "Date",
     "Time",
-    "DateTime",
     "JSON",
     "ForeignKey",
     "Model",
