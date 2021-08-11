@@ -168,6 +168,7 @@ See TypeSystem for [type-specific validation keyword arguments][typesystem-field
 
 * `orm.String(max_length)`
 * `orm.Text()`
+* `orm.BigInteger()`
 * `orm.Boolean()`
 * `orm.Integer()`
 * `orm.Float()`
