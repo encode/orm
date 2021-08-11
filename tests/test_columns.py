@@ -47,7 +47,7 @@ def async_adapter(wrapped_func):
 
     @functools.wraps(wrapped_func)
     def run_sync(*args, **kwargs):
-        loop = asyncio.get_event_loop()
+        loop = asyncio.new_event_loop()()
         task = wrapped_func(*args, **kwargs)
         return loop.run_until_complete(task)
 
