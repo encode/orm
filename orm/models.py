@@ -1,14 +1,11 @@
 import asyncio
-import typing
-from abc import ABCMeta
 
 import databases
 import sqlalchemy
 import typesystem
 
 from orm.exceptions import MultipleMatches, NoMatch
-from orm.fields import ForeignKey, String, Text
-
+from orm.fields import String, Text
 
 FILTER_OPERATORS = {
     "exact": "__eq__",
@@ -45,13 +42,13 @@ class ModelRegistry:
         asyncio.run(self._drop_all())
 
     async def _create_all(self):
-        async with self.database as database:
+        async with self.database:
             for model_cls in self.models.values():
                 expr = sqlalchemy.schema.CreateTable(model_cls.table)
                 await self.database.execute(str(expr))
 
     async def _drop_all(self):
-        async with self.database as database:
+        async with self.database:
             for model_cls in self.models.values():
                 expr = sqlalchemy.schema.DropTable(model_cls.table)
                 await self.database.execute(str(expr))
@@ -61,15 +58,15 @@ class ModelMeta(type):
     def __new__(cls, name, bases, attrs):
         model_class = super().__new__(cls, name, bases, attrs)
 
-        if 'registry' in attrs:
-            model_class.database = attrs['registry'].database
-            attrs['registry'].models[name] = model_class
+        if "registry" in attrs:
+            model_class.database = attrs["registry"].database
+            attrs["registry"].models[name] = model_class
 
-            if 'tablename' not in attrs:
-                setattr(model_class, 'tablename', name.lower())
+            if "tablename" not in attrs:
+                setattr(model_class, "tablename", name.lower())
 
-        for name, field in attrs.get('fields', {}).items():
-            setattr(field, 'registry', attrs.get('registry'))
+        for name, field in attrs.get("fields", {}).items():
+            setattr(field, "registry", attrs.get("registry"))
             if field.primary_key:
                 model_class.pkname = name
 
@@ -77,15 +74,23 @@ class ModelMeta(type):
 
     @property
     def table(cls):
-        if not hasattr(cls, '_table'):
+        if not hasattr(cls, "_table"):
             cls._table = cls.build_table()
         return cls._table
 
 
 class QuerySet:
-    ESCAPE_CHARACTERS = ['%', '_']
+    ESCAPE_CHARACTERS = ["%", "_"]
 
-    def __init__(self, model_cls=None, filter_clauses=None, select_related=None, limit_count=None, offset=None, order_by=None):
+    def __init__(
+        self,
+        model_cls=None,
+        filter_clauses=None,
+        select_related=None,
+        limit_count=None,
+        offset=None,
+        order_by=None,
+    ):
         self.model_cls = model_cls
         self.filter_clauses = [] if filter_clauses is None else filter_clauses
         self._select_related = [] if select_related is None else select_related
@@ -199,19 +204,20 @@ class QuerySet:
             has_escaped_character = False
 
             if op in ["contains", "icontains"]:
-                has_escaped_character = any(c for c in self.ESCAPE_CHARACTERS
-                                            if c in value)
+                has_escaped_character = any(
+                    c for c in self.ESCAPE_CHARACTERS if c in value
+                )
                 if has_escaped_character:
                     # enable escape modifier
                     for char in self.ESCAPE_CHARACTERS:
-                        value = value.replace(char, f'\\{char}')
+                        value = value.replace(char, f"\\{char}")
                 value = f"%{value}%"
 
             if isinstance(value, Model):
                 value = value.pk
 
             clause = getattr(column, op_attr)(value)
-            clause.modifiers['escape'] = '\\' if has_escaped_character else None
+            clause.modifiers["escape"] = "\\" if has_escaped_character else None
             filter_clauses.append(clause)
 
         return self.__class__(
@@ -239,8 +245,14 @@ class QuerySet:
         #
         # clause.modifiers['escape'] = '\\' if has_escaped_character else None
 
-        search_fields = [name for name, field in self.model_cls.fields.items() if isinstance(field, (String, Text))]
-        search_clauses = [self.table.columns[name].ilike(value) for name in search_fields]
+        search_fields = [
+            name
+            for name, field in self.model_cls.fields.items()
+            if isinstance(field, (String, Text))
+        ]
+        search_clauses = [
+            self.table.columns[name].ilike(value) for name in search_fields
+        ]
 
         if len(search_clauses) > 1:
             filter_clauses.append(sqlalchemy.sql.or_(*search_clauses))
@@ -372,7 +384,9 @@ class Model(metaclass=ModelMeta):
             kwargs[self.pkname] = kwargs.pop("pk")
         for key, value in kwargs.items():
             if key not in self.fields:
-                raise ValueError(f"Invalid keyword {key} for class {self.__class__.__name__}")
+                raise ValueError(
+                    f"Invalid keyword {key} for class {self.__class__.__name__}"
+                )
             setattr(self, key, value)
 
     @property
@@ -398,7 +412,9 @@ class Model(metaclass=ModelMeta):
 
     async def update(self, **kwargs):
         # Validate the keyword arguments.
-        fields = {key: field.validator for key, field in self.fields.items() if key in kwargs}
+        fields = {
+            key: field.validator for key, field in self.fields.items() if key in kwargs
+        }
         validator = typesystem.Schema(fields=fields)
         kwargs = validator.validate(kwargs)
 

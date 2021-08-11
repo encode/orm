@@ -1,18 +1,14 @@
-import asyncio
 import datetime
-import functools
-
-import pytest
-import sqlalchemy
 
 import databases
+import pytest
+
 import orm
-
 from tests.settings import DATABASE_URL
-
 
 database = databases.Database(DATABASE_URL)
 models = orm.ModelRegistry(database=database)
+
 
 def time():
     return datetime.datetime.now().time()
@@ -26,8 +22,9 @@ class Example(orm.Model):
         "created_day": orm.Date(default=datetime.date.today),
         "created_time": orm.Time(default=time),
         "description": orm.Text(allow_blank=True),
+        "huge_number": orm.BigInteger(),
         "value": orm.Float(allow_null=True),
-        "data": orm.JSON(default={})
+        "data": orm.JSON(default={}),
     }
 
 
@@ -52,11 +49,14 @@ async def test_model_crud():
     example = await Example.objects.get()
     assert example.created.year == datetime.datetime.now().year
     assert example.created_day == datetime.date.today()
-    assert example.description == ''
+    assert example.description == ""
+    assert example.huge_number == 0
     assert example.value is None
     assert example.data == {}
 
-    await example.update(data={"foo": 123}, value=123.456)
+    await example.update(
+        data={"foo": 123}, value=123.456, huge_number=9223372036854775807
+    )
     example = await Example.objects.get()
     assert example.value == 123.456
     assert example.data == {"foo": 123}
