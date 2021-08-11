@@ -1,14 +1,13 @@
 #!/bin/sh -e
 
-PACKAGE="orm"
-
-PREFIX=""
+export PREFIX=""
 if [ -d 'venv' ] ; then
-    PREFIX="venv/bin/"
+    export PREFIX="venv/bin/"
 fi
+export SOURCE_FILES="orm tests"
 
 set -x
 
-${PREFIX}autoflake --in-place --recursive ${PACKAGE} tests
-${PREFIX}black ${PACKAGE} tests
-${PREFIX}isort --multi-line=3 --trailing-comma --force-grid-wrap=0 --combine-as --line-width 88 --recursive --apply ${PACKAGE} tests
+${PREFIX}autoflake --in-place --recursive $SOURCE_FILES
+${PREFIX}isort --project=orm $SOURCE_FILES
+${PREFIX}black $SOURCE_FILES

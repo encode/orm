@@ -3,14 +3,12 @@ import datetime
 import functools
 from enum import Enum
 
+import databases
 import pytest
 import sqlalchemy
 
-import databases
 import orm
-
 from tests.settings import DATABASE_URL
-
 
 database = databases.Database(DATABASE_URL, force_rollback=True)
 metadata = sqlalchemy.MetaData()
@@ -31,6 +29,7 @@ class Example(orm.Model):
     __database__ = database
 
     id = orm.Integer(primary_key=True)
+    huge_number = orm.BigInteger(default=9223372036854775807)
     created = orm.DateTime(default=datetime.datetime.now)
     created_day = orm.Date(default=datetime.date.today)
     created_time = orm.Time(default=time)
@@ -55,7 +54,7 @@ def async_adapter(wrapped_func):
 
     @functools.wraps(wrapped_func)
     def run_sync(*args, **kwargs):
-        loop = asyncio.get_event_loop()
+        loop = asyncio.new_event_loop()
         task = wrapped_func(*args, **kwargs)
         return loop.run_until_complete(task)
 
@@ -68,6 +67,7 @@ async def test_model_crud():
         await Example.objects.create()
 
         example = await Example.objects.get()
+        assert example.huge_number == 9223372036854775807
         assert example.created.year == datetime.datetime.now().year
         assert example.created_day == datetime.date.today()
         assert example.description == ""
