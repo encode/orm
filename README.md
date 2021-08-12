@@ -166,15 +166,16 @@ All fields are required unless one of the following is set:
 The following column types are supported.
 See TypeSystem for [type-specific validation keyword arguments][typesystem-fields].
 
-* `orm.String(max_length)`
-* `orm.Text()`
 * `orm.BigInteger()`
 * `orm.Boolean()`
-* `orm.Integer()`
-* `orm.Float()`
 * `orm.Date()`
-* `orm.Time()`
 * `orm.DateTime()`
+* `orm.Enum()`
+* `orm.Float()`
+* `orm.Integer()`
+* `orm.String(max_length)`
+* `orm.Text()`
+* `orm.Time()`
 * `orm.JSON()`
 
 [sqlalchemy-core]: https://docs.sqlalchemy.org/en/latest/core/
