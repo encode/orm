@@ -51,6 +51,11 @@ setup(
     package_data={PACKAGE: ["py.typed"]},
     data_files=[("", ["LICENSE.md"])],
     install_requires=["databases>=0.2.1", "typesystem"],
+    extras_require={
+        "postgresql": ["databases[postgresql]"],
+        "mysql": ["databases[mysql]"],
+        "sqlite": ["databases[sqlite]"],
+    },
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Environment :: Web Environment",

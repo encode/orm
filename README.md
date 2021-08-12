@@ -24,6 +24,29 @@ database migrations.
 
 **ORM is still under development: We recommend pinning any dependencies with `orm~=0.1`**
 
+---
+
+## Installation
+
+```shell
+$ pip install orm
+```
+
+You can install the required database drivers with:
+
+```shell
+$ pip install orm[postgresql]
+$ pip install orm[mysql]
+$ pip install orm[sqlite]
+```
+
+Driver support is provided using one of [asyncpg][asyncpg], [aiomysql][aiomysql], or [aiosqlite][aiosqlite].
+Note that if you are using any synchronous SQLAlchemy functions such as `engine.create_all()` or [alembic][alembic] migrations then you still have to install a synchronous DB driver: [psycopg2][psycopg2] for PostgreSQL and [pymysql][pymysql] for MySQL.
+
+---
+
+## Quickstart
+
 **Note**: Use `ipython` to try this from the console, since it supports `await`.
 
 ```python
