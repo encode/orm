@@ -1,6 +1,6 @@
 #!/bin/sh -e
 
-VERSION_FILE="starlette/__init__.py"
+VERSION_FILE="orm/__init__.py"
 
 if [ -d 'venv' ] ; then
     PREFIX="venv/bin/"
