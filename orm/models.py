@@ -95,22 +95,21 @@ class QuerySet:
         return expr
 
     def filter(self, **kwargs):
-        return self._filter_query(kwargs)
+        return self._filter_query(**kwargs)
 
     def exclude(self, **kwargs):
-        return self._filter_query(kwargs, exclude=True)
+        return self._filter_query(_exclude=True, **kwargs)
 
-    def _filter_query(self, filters, exclude=False):
+    def _filter_query(self, _exclude: bool = False, **kwargs):
+        clauses = []
         filter_clauses = self.filter_clauses
         select_related = list(self._select_related)
 
-        if filters.get("pk"):
+        if kwargs.get("pk"):
             pk_name = self.model_cls.__pkname__
-            filters[pk_name] = filters.pop("pk")
+            kwargs[pk_name] = kwargs.pop("pk")
 
-        clauses = []
-
-        for key, value in filters.items():
+        for key, value in kwargs.items():
             if "__" in key:
                 parts = key.split("__")
 
@@ -165,8 +164,8 @@ class QuerySet:
 
             clauses.append(clause)
 
-        if exclude:
-            filter_clauses.append(~sqlalchemy.sql.and_(*clauses))
+        if _exclude:
+            filter_clauses.append(sqlalchemy.not_(sqlalchemy.sql.and_(*clauses)))
         else:
             filter_clauses += clauses
 
