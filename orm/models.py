@@ -5,8 +5,6 @@ import typesystem
 from typesystem.schemas import SchemaMetaclass
 
 from orm.exceptions import MultipleMatches, NoMatch
-from orm.fields import ForeignKey
-
 
 FILTER_OPERATORS = {
     "exact": "__eq__",
@@ -49,12 +47,21 @@ class ModelMetaclass(SchemaMetaclass):
 
 
 class QuerySet:
-    ESCAPE_CHARACTERS = ['%', '_']
-    def __init__(self, model_cls=None, filter_clauses=None, select_related=None, limit_count=None):
+    ESCAPE_CHARACTERS = ["%", "_"]
+
+    def __init__(
+        self,
+        model_cls=None,
+        filter_clauses=None,
+        select_related=None,
+        limit_count=None,
+        offset=None,
+    ):
         self.model_cls = model_cls
         self.filter_clauses = [] if filter_clauses is None else filter_clauses
         self._select_related = [] if select_related is None else select_related
         self.limit_count = limit_count
+        self.query_offset = offset
 
     def __get__(self, instance, owner):
         return self.__class__(model_cls=owner)
@@ -91,6 +98,9 @@ class QuerySet:
 
         if self.limit_count:
             expr = expr.limit(self.limit_count)
+
+        if self.query_offset:
+            expr = expr.offset(self.query_offset)
 
         return expr
 
@@ -148,19 +158,20 @@ class QuerySet:
             has_escaped_character = False
 
             if op in ["contains", "icontains"]:
-                has_escaped_character = any(c for c in self.ESCAPE_CHARACTERS
-                                            if c in value)
+                has_escaped_character = any(
+                    c for c in self.ESCAPE_CHARACTERS if c in value
+                )
                 if has_escaped_character:
                     # enable escape modifier
                     for char in self.ESCAPE_CHARACTERS:
-                        value = value.replace(char, f'\\{char}')
+                        value = value.replace(char, f"\\{char}")
                 value = f"%{value}%"
 
             if isinstance(value, Model):
                 value = value.pk
 
             clause = getattr(column, op_attr)(value)
-            clause.modifiers['escape'] = '\\' if has_escaped_character else None
+            clause.modifiers["escape"] = "\\" if has_escaped_character else None
 
             clauses.append(clause)
 
@@ -173,7 +184,8 @@ class QuerySet:
             model_cls=self.model_cls,
             filter_clauses=filter_clauses,
             select_related=select_related,
-            limit_count=self.limit_count
+            limit_count=self.limit_count,
+            offset=self.query_offset,
         )
 
     def select_related(self, related):
@@ -185,7 +197,8 @@ class QuerySet:
             model_cls=self.model_cls,
             filter_clauses=self.filter_clauses,
             select_related=related,
-            limit_count=self.limit_count
+            limit_count=self.limit_count,
+            offset=self.query_offset,
         )
 
     async def exists(self) -> bool:
@@ -198,7 +211,17 @@ class QuerySet:
             model_cls=self.model_cls,
             filter_clauses=self.filter_clauses,
             select_related=self._select_related,
-            limit_count=limit_count
+            limit_count=limit_count,
+            offset=self.query_offset,
+        )
+
+    def offset(self, offset: int):
+        return self.__class__(
+            model_cls=self.model_cls,
+            filter_clauses=self.filter_clauses,
+            select_related=self._select_related,
+            limit_count=self.limit_count,
+            offset=offset,
         )
 
     async def count(self) -> int:

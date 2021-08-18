@@ -1,12 +1,11 @@
 import asyncio
 import functools
 
+import databases
 import pytest
 import sqlalchemy
 
-import databases
 import orm
-
 from tests.settings import DATABASE_URL
 
 database = databases.Database(DATABASE_URL, force_rollback=True)
@@ -48,7 +47,7 @@ def async_adapter(wrapped_func):
 
     @functools.wraps(wrapped_func)
     def run_sync(*args, **kwargs):
-        loop = asyncio.get_event_loop()
+        loop = asyncio.new_event_loop()
         task = wrapped_func(*args, **kwargs)
         return loop.run_until_complete(task)
 
@@ -211,7 +210,18 @@ async def test_model_limit_with_filter():
         await User.objects.create(name="Tom")
         await User.objects.create(name="Tom")
 
-        assert len(await User.objects.limit(2).filter(name__iexact='Tom').all()) == 2
+        assert len(await User.objects.limit(2).filter(name__iexact="Tom").all()) == 2
+
+
+@async_adapter
+async def test_offset():
+    async with database:
+        await User.objects.create(name="Tom")
+        await User.objects.create(name="Jane")
+
+        users = await User.objects.offset(1).limit(1).all()
+        assert users[0].name == "Jane"
+
 
 @async_adapter
 async def test_model_first():
