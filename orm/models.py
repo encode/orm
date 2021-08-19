@@ -5,8 +5,6 @@ import typesystem
 from typesystem.schemas import SchemaMetaclass
 
 from orm.exceptions import MultipleMatches, NoMatch
-from orm.fields import ForeignKey
-
 
 FILTER_OPERATORS = {
     "exact": "__eq__",
@@ -49,8 +47,16 @@ class ModelMetaclass(SchemaMetaclass):
 
 
 class QuerySet:
-    ESCAPE_CHARACTERS = ['%', '_']
-    def __init__(self, model_cls=None, filter_clauses=None, select_related=None, limit_count=None, offset=None, order_args=None):
+    ESCAPE_CHARACTERS = ["%", "_"]
+    def __init__(
+      self,
+      model_cls=None,
+      filter_clauses=None,
+      select_related=None,
+      limit_count=None,
+      offset=None,
+      order_args=None,
+    ):
         self.model_cls = model_cls
         self.order_args = [] if order_args is None else order_args
         self.filter_clauses = [] if filter_clauses is None else filter_clauses
@@ -104,6 +110,13 @@ class QuerySet:
         return expr
 
     def filter(self, **kwargs):
+        return self._filter_query(**kwargs)
+
+    def exclude(self, **kwargs):
+        return self._filter_query(_exclude=True, **kwargs)
+
+    def _filter_query(self, _exclude: bool = False, **kwargs):
+        clauses = []
         filter_clauses = self.filter_clauses
         select_related = list(self._select_related)
 
@@ -150,27 +163,34 @@ class QuerySet:
             has_escaped_character = False
 
             if op in ["contains", "icontains"]:
-                has_escaped_character = any(c for c in self.ESCAPE_CHARACTERS
-                                            if c in value)
+                has_escaped_character = any(
+                    c for c in self.ESCAPE_CHARACTERS if c in value
+                )
                 if has_escaped_character:
                     # enable escape modifier
                     for char in self.ESCAPE_CHARACTERS:
-                        value = value.replace(char, f'\\{char}')
+                        value = value.replace(char, f"\\{char}")
                 value = f"%{value}%"
 
             if isinstance(value, Model):
                 value = value.pk
 
             clause = getattr(column, op_attr)(value)
-            clause.modifiers['escape'] = '\\' if has_escaped_character else None
-            filter_clauses.append(clause)
+            clause.modifiers["escape"] = "\\" if has_escaped_character else None
+
+            clauses.append(clause)
+
+        if _exclude:
+            filter_clauses.append(sqlalchemy.not_(sqlalchemy.sql.and_(*clauses)))
+        else:
+            filter_clauses += clauses
 
         return self.__class__(
             model_cls=self.model_cls,
             filter_clauses=filter_clauses,
             select_related=select_related,
             limit_count=self.limit_count,
-            offset=self.query_offset
+            offset=self.query_offset,
         )
 
     def select_related(self, related):
@@ -183,7 +203,7 @@ class QuerySet:
             filter_clauses=self.filter_clauses,
             select_related=related,
             limit_count=self.limit_count,
-            offset=self.query_offset
+            offset=self.query_offset,
         )
 
     def _prepared_order(self):
@@ -217,9 +237,8 @@ class QuerySet:
             filter_clauses=self.filter_clauses,
             select_related=self._select_related,
             limit_count=limit_count,
-            offset=self.query_offset
+            offset=self.query_offset,
         )
-
 
     def offset(self, offset: int):
         return self.__class__(
@@ -227,7 +246,7 @@ class QuerySet:
             filter_clauses=self.filter_clauses,
             select_related=self._select_related,
             limit_count=self.limit_count,
-            offset=offset
+            offset=offset,
         )
 
     async def count(self) -> int:

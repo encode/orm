@@ -1,10 +1,15 @@
 databases[sqlite]
 typesystem
 
+# Packaging
+twine
+wheel
+
 # Testing
 autoflake
 black
 codecov
+flake8
 isort
 mypy
 pytest

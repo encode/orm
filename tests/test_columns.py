@@ -1,15 +1,14 @@
 import asyncio
 import datetime
 import functools
+from enum import Enum
 
+import databases
 import pytest
 import sqlalchemy
 
-import databases
 import orm
-
 from tests.settings import DATABASE_URL
-
 
 database = databases.Database(DATABASE_URL, force_rollback=True)
 metadata = sqlalchemy.MetaData()
@@ -19,18 +18,25 @@ def time():
     return datetime.datetime.now().time()
 
 
+class StatusEnum(Enum):
+    DRAFT = "Draft"
+    RELEASED = "Released"
+
+
 class Example(orm.Model):
     __tablename__ = "example"
     __metadata__ = metadata
     __database__ = database
 
     id = orm.Integer(primary_key=True)
+    huge_number = orm.BigInteger(default=9223372036854775807)
     created = orm.DateTime(default=datetime.datetime.now)
     created_day = orm.Date(default=datetime.date.today)
     created_time = orm.Time(default=time)
     description = orm.Text(allow_blank=True)
     value = orm.Float(allow_null=True)
     data = orm.JSON(default={})
+    status = orm.Enum(StatusEnum, default=StatusEnum.DRAFT)
 
 
 @pytest.fixture(autouse=True, scope="module")
@@ -48,7 +54,7 @@ def async_adapter(wrapped_func):
 
     @functools.wraps(wrapped_func)
     def run_sync(*args, **kwargs):
-        loop = asyncio.get_event_loop()
+        loop = asyncio.new_event_loop()
         task = wrapped_func(*args, **kwargs)
         return loop.run_until_complete(task)
 
@@ -61,13 +67,18 @@ async def test_model_crud():
         await Example.objects.create()
 
         example = await Example.objects.get()
+        assert example.huge_number == 9223372036854775807
         assert example.created.year == datetime.datetime.now().year
         assert example.created_day == datetime.date.today()
-        assert example.description == ''
+        assert example.description == ""
         assert example.value is None
         assert example.data == {}
+        assert example.status == StatusEnum.DRAFT
 
-        await example.update(data={"foo": 123}, value=123.456)
+        await example.update(
+            data={"foo": 123}, value=123.456, status=StatusEnum.RELEASED
+        )
         example = await Example.objects.get()
         assert example.value == 123.456
         assert example.data == {"foo": 123}
+        assert example.status == StatusEnum.RELEASED
