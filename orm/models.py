@@ -99,7 +99,7 @@ class QuerySet:
             expr = expr.where(clause)
 
         if self.order_args:
-            order_args = self._prepared_order()
+            order_args = self._prepare_order_args()
             expr = expr.order_by(*order_args)
 
         if self.limit_count:
@@ -207,16 +207,6 @@ class QuerySet:
             offset=self.query_offset,
         )
 
-    def _prepared_order(self):
-        prepared = []
-        for order in self.order_args:
-            desc = order.startswith("-")
-            col_name = order.lstrip("-") if desc else order
-            col = self.model_cls.__table__.columns[col_name]
-            prepared.append(col.desc() if desc else col)
-
-        return prepared
-
     def order_by(self, *args):
         return self.__class__(
             model_cls=self.model_cls,
@@ -310,6 +300,16 @@ class QuerySet:
         instance = self.model_cls(kwargs)
         instance.pk = await self.database.execute(expr)
         return instance
+
+    def _prepare_order_args(self):
+        prepared_args = []
+        for order_arg in self.order_args:
+            is_desc = order_arg.startswith("-")
+            column_name = order_arg.lstrip("-") if is_desc else order_arg
+            column = self.model_cls.__table__.columns[column_name]
+            prepared_args.append(column.desc() if is_desc else column)
+
+        return prepared_args
 
 
 class Model(typesystem.Schema, metaclass=ModelMetaclass):
