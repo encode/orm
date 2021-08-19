@@ -139,8 +139,17 @@ async def test_model_filter():
         products = await Product.objects.all(rating__gte=2, in_stock=True)
         assert len(products) == 2
 
+        products = await Product.objects.exclude(rating__gte=4, in_stock=True).all()
+        assert len(products) == 2
+
+        products = await Product.objects.exclude(in_stock=True).all()
+        assert len(products) == 1
+
         products = await Product.objects.all(name__icontains="T")
         assert len(products) == 2
+
+        products = await Product.objects.exclude(name__icontains="T").all()
+        assert len(products) == 1
 
         # Test escaping % character from icontains, contains, and iexact
         await Product.objects.create(name="100%-Cotton", rating=3)
@@ -149,10 +158,19 @@ async def test_model_filter():
         products = Product.objects.filter(name__iexact="100%-cotton")
         assert await products.count() == 1
 
+        products = Product.objects.exclude(name__iexact="100%-cotton")
+        assert await products.count() == 5
+
         products = Product.objects.filter(name__contains="%")
         assert await products.count() == 3
 
+        products = Product.objects.exclude(name__contains="%")
+        assert await products.count() == 3
+
         products = Product.objects.filter(name__icontains="%")
+        assert await products.count() == 3
+
+        products = Product.objects.exclude(name__icontains="%")
         assert await products.count() == 3
 
 

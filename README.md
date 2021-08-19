@@ -82,6 +82,9 @@ notes = await Note.objects.all()
 # .filter()
 notes = await Note.objects.filter(completed=True).all()
 
+# .exclude()
+notes = await Note.objects.exclude(completed=False).all()
+
 # exact, iexact, contains, icontains, lt, lte, gt, gte, in
 notes = await Note.objects.filter(text__icontains="mum").all()
 

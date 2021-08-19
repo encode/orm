@@ -105,6 +105,13 @@ class QuerySet:
         return expr
 
     def filter(self, **kwargs):
+        return self._filter_query(**kwargs)
+
+    def exclude(self, **kwargs):
+        return self._filter_query(_exclude=True, **kwargs)
+
+    def _filter_query(self, _exclude: bool = False, **kwargs):
+        clauses = []
         filter_clauses = self.filter_clauses
         select_related = list(self._select_related)
 
@@ -165,7 +172,13 @@ class QuerySet:
 
             clause = getattr(column, op_attr)(value)
             clause.modifiers["escape"] = "\\" if has_escaped_character else None
-            filter_clauses.append(clause)
+
+            clauses.append(clause)
+
+        if _exclude:
+            filter_clauses.append(sqlalchemy.not_(sqlalchemy.sql.and_(*clauses)))
+        else:
+            filter_clauses += clauses
 
         return self.__class__(
             model_cls=self.model_cls,
