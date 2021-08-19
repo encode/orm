@@ -3,10 +3,10 @@ import datetime
 import functools
 from enum import Enum
 
-import databases
 import pytest
 import sqlalchemy
 
+import databases
 import orm
 from tests.settings import DATABASE_URL
 

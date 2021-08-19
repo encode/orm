@@ -48,14 +48,15 @@ class ModelMetaclass(SchemaMetaclass):
 
 class QuerySet:
     ESCAPE_CHARACTERS = ["%", "_"]
+
     def __init__(
-      self,
-      model_cls=None,
-      filter_clauses=None,
-      select_related=None,
-      limit_count=None,
-      offset=None,
-      order_args=None,
+        self,
+        model_cls=None,
+        filter_clauses=None,
+        select_related=None,
+        limit_count=None,
+        offset=None,
+        order_args=None,
     ):
         self.model_cls = model_cls
         self.order_args = [] if order_args is None else order_args
@@ -209,8 +210,8 @@ class QuerySet:
     def _prepared_order(self):
         prepared = []
         for order in self.order_args:
-            desc = order.startswith('-')
-            col_name = order.lstrip('-') if desc else order
+            desc = order.startswith("-")
+            col_name = order.lstrip("-") if desc else order
             col = self.model_cls.__table__.columns[col_name]
             prepared.append(col.desc() if desc else col)
 

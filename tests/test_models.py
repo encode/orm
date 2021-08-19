@@ -2,10 +2,10 @@ import asyncio
 import datetime
 import functools
 
-import databases
 import pytest
 import sqlalchemy
 
+import databases
 import orm
 from tests.settings import DATABASE_URL
 
@@ -209,7 +209,9 @@ async def test_model_order_by_multi():
         await User.objects.create(name="Tom", timestamp=datetime.datetime(2020, 1, 1))
         await User.objects.create(name="Tom", timestamp=datetime.datetime(2020, 7, 1))
         await User.objects.create(name="Allen", timestamp=datetime.datetime(2020, 6, 1))
-        await User.objects.create(name="Acker", timestamp=datetime.datetime(2020, 12, 1))
+        await User.objects.create(
+            name="Acker", timestamp=datetime.datetime(2020, 12, 1)
+        )
         users = await User.objects.order_by("name", "-timestamp").all()
         assert len(users) == 4
         assert users[0].name == "Acker"
