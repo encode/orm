@@ -81,8 +81,8 @@ async def test_model_crud():
         await example.update(
             data={"foo": 123},
             value=123.456,
-          status=StatusEnum.RELEASED,
-          price=decimal.getcontext().create_decimal(0.12345678)),
+            status=StatusEnum.RELEASED,
+            price=decimal.getcontext().create_decimal(0.12345678),
         )
         example = await Example.objects.get()
         assert example.value == 123.456
