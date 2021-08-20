@@ -1,12 +1,11 @@
 import asyncio
 import functools
 
+import databases
 import pytest
 import sqlalchemy
 
-import databases
 import orm
-
 from tests.settings import DATABASE_URL
 
 database = databases.Database(DATABASE_URL, force_rollback=True)
@@ -48,7 +47,7 @@ def async_adapter(wrapped_func):
 
     @functools.wraps(wrapped_func)
     def run_sync(*args, **kwargs):
-        loop = asyncio.get_event_loop()
+        loop = asyncio.new_event_loop()
         task = wrapped_func(*args, **kwargs)
         return loop.run_until_complete(task)
 
@@ -110,6 +109,10 @@ async def test_model_get():
         with pytest.raises(orm.MultipleMatches):
             await User.objects.get()
 
+        same_user = await User.objects.get(pk=user.id)
+        assert same_user.id == user.id
+        assert same_user.pk == user.pk
+
 
 @async_adapter
 async def test_model_filter():
@@ -136,8 +139,17 @@ async def test_model_filter():
         products = await Product.objects.all(rating__gte=2, in_stock=True)
         assert len(products) == 2
 
+        products = await Product.objects.exclude(rating__gte=4, in_stock=True).all()
+        assert len(products) == 2
+
+        products = await Product.objects.exclude(in_stock=True).all()
+        assert len(products) == 1
+
         products = await Product.objects.all(name__icontains="T")
         assert len(products) == 2
+
+        products = await Product.objects.exclude(name__icontains="T").all()
+        assert len(products) == 1
 
         # Test escaping % character from icontains, contains, and iexact
         await Product.objects.create(name="100%-Cotton", rating=3)
@@ -146,10 +158,19 @@ async def test_model_filter():
         products = Product.objects.filter(name__iexact="100%-cotton")
         assert await products.count() == 1
 
+        products = Product.objects.exclude(name__iexact="100%-cotton")
+        assert await products.count() == 5
+
         products = Product.objects.filter(name__contains="%")
         assert await products.count() == 3
 
+        products = Product.objects.exclude(name__contains="%")
+        assert await products.count() == 3
+
         products = Product.objects.filter(name__icontains="%")
+        assert await products.count() == 3
+
+        products = Product.objects.exclude(name__icontains="%")
         assert await products.count() == 3
 
 
@@ -189,4 +210,26 @@ async def test_model_limit_with_filter():
         await User.objects.create(name="Tom")
         await User.objects.create(name="Tom")
 
-        assert len(await User.objects.limit(2).filter(name__iexact='Tom').all()) == 2
+        assert len(await User.objects.limit(2).filter(name__iexact="Tom").all()) == 2
+
+
+@async_adapter
+async def test_offset():
+    async with database:
+        await User.objects.create(name="Tom")
+        await User.objects.create(name="Jane")
+
+        users = await User.objects.offset(1).limit(1).all()
+        assert users[0].name == "Jane"
+
+
+@async_adapter
+async def test_model_first():
+    async with database:
+        tom = await User.objects.create(name="Tom")
+        jane = await User.objects.create(name="Jane")
+
+        assert await User.objects.first() == tom
+        assert await User.objects.first(name="Jane") == jane
+        assert await User.objects.filter(name="Jane").first() == jane
+        assert await User.objects.filter(name="Lucy").first() is None

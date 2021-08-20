@@ -62,6 +62,11 @@ class Integer(ModelField, typesystem.Integer):
         return sqlalchemy.Integer()
 
 
+class BigInteger(ModelField, typesystem.Integer):
+    def get_column_type(self):
+        return sqlalchemy.BigInteger()
+
+
 class Float(ModelField, typesystem.Float):
     def get_column_type(self):
         return sqlalchemy.Float()
@@ -124,3 +129,12 @@ class ForeignKey(ModelField, typesystem.Field):
         if isinstance(value, self.to):
             return value
         return self.to({self.to.__pkname__: value})
+
+
+class Enum(ModelField, typesystem.Any):
+    def __init__(self, enum, **kwargs):
+        super().__init__(**kwargs)
+        self.enum = enum
+
+    def get_column_type(self):
+        return sqlalchemy.Enum(self.enum)
