@@ -56,14 +56,14 @@ class QuerySet:
         select_related=None,
         limit_count=None,
         offset=None,
-        order_args=None,
+        order_by=None,
     ):
         self.model_cls = model_cls
-        self.order_args = [] if order_args is None else order_args
         self.filter_clauses = [] if filter_clauses is None else filter_clauses
         self._select_related = [] if select_related is None else select_related
         self.limit_count = limit_count
         self.query_offset = offset
+        self._order_by = [] if order_by is None else order_by
 
     def __get__(self, instance, owner):
         return self.__class__(model_cls=owner)
@@ -98,9 +98,9 @@ class QuerySet:
                 clause = sqlalchemy.sql.and_(*self.filter_clauses)
             expr = expr.where(clause)
 
-        if self.order_args:
-            order_args = self._prepare_order_args()
-            expr = expr.order_by(*order_args)
+        if self._order_by:
+            order_by = list(map(self._prepare_order_by, self._order_by))
+            expr = expr.order_by(*order_by)
 
         if self.limit_count:
             expr = expr.limit(self.limit_count)
@@ -192,6 +192,7 @@ class QuerySet:
             select_related=select_related,
             limit_count=self.limit_count,
             offset=self.query_offset,
+            order_by=self._order_by,
         )
 
     def select_related(self, related):
@@ -205,16 +206,17 @@ class QuerySet:
             select_related=related,
             limit_count=self.limit_count,
             offset=self.query_offset,
+            order_by=self._order_by,
         )
 
-    def order_by(self, *args):
+    def order_by(self, *order_by):
         return self.__class__(
             model_cls=self.model_cls,
             filter_clauses=self.filter_clauses,
             select_related=self._select_related,
             limit_count=self.limit_count,
             offset=self.query_offset,
-            order_args=args,
+            order_by=order_by,
         )
 
     async def exists(self) -> bool:
@@ -229,6 +231,7 @@ class QuerySet:
             select_related=self._select_related,
             limit_count=limit_count,
             offset=self.query_offset,
+            order_by=self._order_by,
         )
 
     def offset(self, offset: int):
@@ -238,6 +241,7 @@ class QuerySet:
             select_related=self._select_related,
             limit_count=self.limit_count,
             offset=offset,
+            order_by=self._order_by,
         )
 
     async def count(self) -> int:
@@ -301,15 +305,11 @@ class QuerySet:
         instance.pk = await self.database.execute(expr)
         return instance
 
-    def _prepare_order_args(self):
-        prepared_args = []
-        for order_arg in self.order_args:
-            is_desc = order_arg.startswith("-")
-            column_name = order_arg.lstrip("-") if is_desc else order_arg
-            column = self.model_cls.__table__.columns[column_name]
-            prepared_args.append(column.desc() if is_desc else column)
-
-        return prepared_args
+    def _prepare_order_by(self, order_by: str):
+        reverse = order_by.startswith("-")
+        order_by = order_by.lstrip("-")
+        order_col = self.table.columns[order_by]
+        return order_col.desc() if reverse else order_col
 
 
 class Model(typesystem.Schema, metaclass=ModelMetaclass):
