@@ -1,6 +1,4 @@
-import asyncio
 import datetime
-import functools
 from enum import Enum
 
 import databases
@@ -9,6 +7,8 @@ import sqlalchemy
 
 import orm
 from tests.settings import DATABASE_URL
+
+pytestmark = pytest.mark.anyio
 
 database = databases.Database(DATABASE_URL, force_rollback=True)
 metadata = sqlalchemy.MetaData()
@@ -47,21 +47,6 @@ def create_test_database():
     metadata.drop_all(engine)
 
 
-def async_adapter(wrapped_func):
-    """
-    Decorator used to run async test cases.
-    """
-
-    @functools.wraps(wrapped_func)
-    def run_sync(*args, **kwargs):
-        loop = asyncio.new_event_loop()
-        task = wrapped_func(*args, **kwargs)
-        return loop.run_until_complete(task)
-
-    return run_sync
-
-
-@async_adapter
 async def test_model_crud():
     async with database:
         await Example.objects.create()
