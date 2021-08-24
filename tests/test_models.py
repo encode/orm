@@ -1,12 +1,11 @@
-import asyncio
-import functools
-
 import databases
 import pytest
 import sqlalchemy
 
 import orm
 from tests.settings import DATABASE_URL
+
+pytestmark = pytest.mark.anyio
 
 database = databases.Database(DATABASE_URL, force_rollback=True)
 metadata = sqlalchemy.MetaData()
@@ -40,20 +39,6 @@ def create_test_database():
     metadata.drop_all(engine)
 
 
-def async_adapter(wrapped_func):
-    """
-    Decorator used to run async test cases.
-    """
-
-    @functools.wraps(wrapped_func)
-    def run_sync(*args, **kwargs):
-        loop = asyncio.new_event_loop()
-        task = wrapped_func(*args, **kwargs)
-        return loop.run_until_complete(task)
-
-    return run_sync
-
-
 def test_model_class():
     assert list(User.fields.keys()) == ["id", "name"]
     assert isinstance(User.fields["id"], orm.Integer)
@@ -69,7 +54,6 @@ def test_model_pk():
     assert user.id == 1
 
 
-@async_adapter
 async def test_model_crud():
     async with database:
         users = await User.objects.all()
@@ -95,7 +79,6 @@ async def test_model_crud():
         assert users == []
 
 
-@async_adapter
 async def test_model_get():
     async with database:
         with pytest.raises(orm.NoMatch):
@@ -114,7 +97,6 @@ async def test_model_get():
         assert same_user.pk == user.pk
 
 
-@async_adapter
 async def test_model_filter():
     async with database:
         await User.objects.create(name="Tom")
@@ -174,7 +156,6 @@ async def test_model_filter():
         assert await products.count() == 3
 
 
-@async_adapter
 async def test_model_exists():
     async with database:
         await User.objects.create(name="Tom")
@@ -182,7 +163,6 @@ async def test_model_exists():
         assert await User.objects.filter(name="Jane").exists() is False
 
 
-@async_adapter
 async def test_model_count():
     async with database:
         await User.objects.create(name="Tom")
@@ -193,7 +173,6 @@ async def test_model_count():
         assert await User.objects.filter(name__icontains="T").count() == 1
 
 
-@async_adapter
 async def test_model_limit():
     async with database:
         await User.objects.create(name="Tom")
@@ -203,7 +182,6 @@ async def test_model_limit():
         assert len(await User.objects.limit(2).all()) == 2
 
 
-@async_adapter
 async def test_model_limit_with_filter():
     async with database:
         await User.objects.create(name="Tom")
@@ -213,7 +191,6 @@ async def test_model_limit_with_filter():
         assert len(await User.objects.limit(2).filter(name__iexact="Tom").all()) == 2
 
 
-@async_adapter
 async def test_offset():
     async with database:
         await User.objects.create(name="Tom")
@@ -223,7 +200,6 @@ async def test_offset():
         assert users[0].name == "Jane"
 
 
-@async_adapter
 async def test_model_first():
     async with database:
         tom = await User.objects.create(name="Tom")
