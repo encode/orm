@@ -56,10 +56,8 @@ class QuerySet:
         select_related=None,
         limit_count=None,
         offset=None,
-        order_args=None,
     ):
         self.model_cls = model_cls
-        self.order_args = [] if order_args is None else order_args
         self.filter_clauses = [] if filter_clauses is None else filter_clauses
         self._select_related = [] if select_related is None else select_related
         self.limit_count = limit_count
@@ -97,10 +95,6 @@ class QuerySet:
             else:
                 clause = sqlalchemy.sql.and_(*self.filter_clauses)
             expr = expr.where(clause)
-
-        if self.order_args:
-            order_args = self._prepare_order_args()
-            expr = expr.order_by(*order_args)
 
         if self.limit_count:
             expr = expr.limit(self.limit_count)
@@ -207,16 +201,6 @@ class QuerySet:
             offset=self.query_offset,
         )
 
-    def order_by(self, *args):
-        return self.__class__(
-            model_cls=self.model_cls,
-            filter_clauses=self.filter_clauses,
-            select_related=self._select_related,
-            limit_count=self.limit_count,
-            offset=self.query_offset,
-            order_args=args,
-        )
-
     async def exists(self) -> bool:
         expr = self.build_select_expression()
         expr = sqlalchemy.exists(expr).select()
@@ -300,16 +284,6 @@ class QuerySet:
         instance = self.model_cls(kwargs)
         instance.pk = await self.database.execute(expr)
         return instance
-
-    def _prepare_order_args(self):
-        prepared_args = []
-        for order_arg in self.order_args:
-            is_desc = order_arg.startswith("-")
-            column_name = order_arg.lstrip("-") if is_desc else order_arg
-            column = self.model_cls.__table__.columns[column_name]
-            prepared_args.append(column.desc() if is_desc else column)
-
-        return prepared_args
 
 
 class Model(typesystem.Schema, metaclass=ModelMetaclass):
