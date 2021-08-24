@@ -5,6 +5,8 @@ import sqlalchemy
 import orm
 from tests.settings import DATABASE_URL
 
+pytestmark = pytest.mark.anyio
+
 database = databases.Database(DATABASE_URL, force_rollback=True)
 metadata = sqlalchemy.MetaData()
 
@@ -66,7 +68,6 @@ def create_test_database():
     metadata.drop_all(engine)
 
 
-@pytest.mark.asyncio
 async def test_model_crud():
     async with database:
         album = await Album.objects.create(name="Malibu")
@@ -83,7 +84,6 @@ async def test_model_crud():
         assert track.album.name == "Malibu"
 
 
-@pytest.mark.asyncio
 async def test_select_related():
     async with database:
         album = await Album.objects.create(name="Malibu")
@@ -105,7 +105,6 @@ async def test_select_related():
         assert len(tracks) == 6
 
 
-@pytest.mark.asyncio
 async def test_fk_filter():
     async with database:
         malibu = await Album.objects.create(name="Malibu")
@@ -149,7 +148,6 @@ async def test_fk_filter():
             assert track.album.name == "Malibu"
 
 
-@pytest.mark.asyncio
 async def test_multiple_fk():
     async with database:
         acme = await Organisation.objects.create(ident="ACME Ltd")

@@ -8,6 +8,8 @@ import sqlalchemy
 import orm
 from tests.settings import DATABASE_URL
 
+pytestmark = pytest.mark.anyio
+
 database = databases.Database(DATABASE_URL, force_rollback=True)
 metadata = sqlalchemy.MetaData()
 
@@ -45,7 +47,6 @@ def create_test_database():
     metadata.drop_all(engine)
 
 
-@pytest.mark.asyncio
 async def test_model_crud():
     async with database:
         await Example.objects.create()

@@ -5,6 +5,8 @@ import sqlalchemy
 import orm
 from tests.settings import DATABASE_URL
 
+pytestmark = pytest.mark.anyio
+
 database = databases.Database(DATABASE_URL, force_rollback=True)
 metadata = sqlalchemy.MetaData()
 
@@ -52,7 +54,6 @@ def test_model_pk():
     assert user.id == 1
 
 
-@pytest.mark.asyncio
 async def test_model_crud():
     async with database:
         users = await User.objects.all()
@@ -78,7 +79,6 @@ async def test_model_crud():
         assert users == []
 
 
-@pytest.mark.asyncio
 async def test_model_get():
     async with database:
         with pytest.raises(orm.NoMatch):
@@ -97,7 +97,6 @@ async def test_model_get():
         assert same_user.pk == user.pk
 
 
-@pytest.mark.asyncio
 async def test_model_filter():
     async with database:
         await User.objects.create(name="Tom")
@@ -157,7 +156,6 @@ async def test_model_filter():
         assert await products.count() == 3
 
 
-@pytest.mark.asyncio
 async def test_model_order_by():
     async with database:
         await User.objects.create(name="Tom")
@@ -170,7 +168,6 @@ async def test_model_order_by():
         assert users[2].name == "Tom"
 
 
-@pytest.mark.asyncio
 async def test_model_order_by_desc():
     async with database:
         await User.objects.create(name="Tom")
@@ -183,7 +180,6 @@ async def test_model_order_by_desc():
         assert users[2].name == "Allen"
 
 
-@pytest.mark.asyncio
 async def test_model_order_by_multi():
     async with database:
         await User.objects.create(name="Tom")
@@ -197,7 +193,6 @@ async def test_model_order_by_multi():
         assert users[1].id == 2
 
 
-@pytest.mark.asyncio
 async def test_model_exists():
     async with database:
         await User.objects.create(name="Tom")
@@ -205,7 +200,6 @@ async def test_model_exists():
         assert await User.objects.filter(name="Jane").exists() is False
 
 
-@pytest.mark.asyncio
 async def test_model_count():
     async with database:
         await User.objects.create(name="Tom")
@@ -216,7 +210,6 @@ async def test_model_count():
         assert await User.objects.filter(name__icontains="T").count() == 1
 
 
-@pytest.mark.asyncio
 async def test_model_limit():
     async with database:
         await User.objects.create(name="Tom")
@@ -226,7 +219,6 @@ async def test_model_limit():
         assert len(await User.objects.limit(2).all()) == 2
 
 
-@pytest.mark.asyncio
 async def test_model_limit_with_filter():
     async with database:
         await User.objects.create(name="Tom")
@@ -236,7 +228,6 @@ async def test_model_limit_with_filter():
         assert len(await User.objects.limit(2).filter(name__iexact="Tom").all()) == 2
 
 
-@pytest.mark.asyncio
 async def test_offset():
     async with database:
         await User.objects.create(name="Tom")
@@ -246,7 +237,6 @@ async def test_offset():
         assert users[0].name == "Jane"
 
 
-@pytest.mark.asyncio
 async def test_model_first():
     async with database:
         tom = await User.objects.create(name="Tom")
