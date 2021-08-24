@@ -88,6 +88,10 @@ notes = await Note.objects.exclude(completed=False).all()
 # exact, iexact, contains, icontains, lt, lte, gt, gte, in
 notes = await Note.objects.filter(text__icontains="mum").all()
 
+# .order_by()
+# order by ascending name and descending id
+notes = await Note.objects.order_by("name", "-id").all()
+
 # .get()
 note = await Note.objects.get(id=1)
 
@@ -100,6 +104,7 @@ await note.delete()
 # 'pk' always refers to the primary key
 note = await Note.objects.get(pk=2)
 note.pk  # 2
+
 ```
 
 ORM supports loading and filtering across foreign keys...

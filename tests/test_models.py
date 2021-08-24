@@ -156,6 +156,41 @@ async def test_model_filter():
         assert await products.count() == 3
 
 
+async def test_model_order_by():
+    async with database:
+        await User.objects.create(name="Bob")
+        await User.objects.create(name="Allen")
+        await User.objects.create(name="Bob")
+
+        users = await User.objects.order_by("name").all()
+        assert users[0].name == "Allen"
+        assert users[1].name == "Bob"
+
+        users = await User.objects.order_by("-name").all()
+        assert users[1].name == "Bob"
+        assert users[2].name == "Allen"
+
+        users = await User.objects.order_by("name", "-id").all()
+        assert users[0].name == "Allen"
+        assert users[0].id == 2
+        assert users[1].name == "Bob"
+        assert users[1].id == 3
+
+        users = await User.objects.filter(name="Bob").order_by("-id").all()
+        assert users[0].name == "Bob"
+        assert users[0].id == 3
+        assert users[1].name == "Bob"
+        assert users[1].id == 1
+
+        users = await User.objects.order_by("id").limit(1).all()
+        assert users[0].name == "Bob"
+        assert users[0].id == 1
+
+        users = await User.objects.order_by("id").limit(1).offset(1).all()
+        assert users[0].name == "Allen"
+        assert users[0].id == 2
+
+
 async def test_model_exists():
     async with database:
         await User.objects.create(name="Tom")
