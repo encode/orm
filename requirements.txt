@@ -6,6 +6,7 @@ twine
 wheel
 
 # Testing
+anyio>=3.0.0,<4
 autoflake
 black
 codecov
