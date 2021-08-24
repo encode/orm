@@ -50,7 +50,7 @@ setup(
     packages=get_packages(PACKAGE),
     package_data={PACKAGE: ["py.typed"]},
     data_files=[("", ["LICENSE.md"])],
-    install_requires=["anyio>=3.0.0,<4", "databases>=0.2.1", "typesystem"],
+    install_requires=["databases>=0.2.1", "typesystem"],
     extras_require={
         "postgresql": ["asyncpg"],
         "mysql": ["aiomysql"],
