@@ -96,7 +96,7 @@ class QuerySet:
         self._select_related = [] if select_related is None else select_related
         self.limit_count = limit_count
         self.query_offset = offset
-        self._order_by = order_by
+        self._order_by = [] if order_by is None else order_by
 
     def __get__(self, instance, owner):
         return self.__class__(model_cls=owner)
@@ -141,13 +141,9 @@ class QuerySet:
                 clause = sqlalchemy.sql.and_(*self.filter_clauses)
             expr = expr.where(clause)
 
-        if self._order_by is not None:
-            reverse = self._order_by.startswith("-")
-            order_by = self._order_by.lstrip("-")
-            order_col = self.table.columns[order_by]
-            if reverse:
-                order_col = order_col.desc()
-            expr = expr.order_by(order_col)
+        if self._order_by:
+            order_by = list(map(self._prepare_order_by, self._order_by))
+            expr = expr.order_by(*order_by)
 
         if self.limit_count:
             expr = expr.limit(self.limit_count)
@@ -158,7 +154,14 @@ class QuerySet:
         return expr
 
     def filter(self, **kwargs):
-        filter_clauses = list(self.filter_clauses)
+        return self._filter_query(**kwargs)
+
+    def exclude(self, **kwargs):
+        return self._filter_query(_exclude=True, **kwargs)
+
+    def _filter_query(self, _exclude: bool = False, **kwargs):
+        clauses = []
+        filter_clauses = self.filter_clauses
         select_related = list(self._select_related)
 
         if kwargs.get("pk"):
@@ -218,7 +221,13 @@ class QuerySet:
 
             clause = getattr(column, op_attr)(value)
             clause.modifiers["escape"] = "\\" if has_escaped_character else None
-            filter_clauses.append(clause)
+
+            clauses.append(clause)
+
+        if _exclude:
+            filter_clauses.append(sqlalchemy.not_(sqlalchemy.sql.and_(*clauses)))
+        else:
+            filter_clauses += clauses
 
         return self.__class__(
             model_cls=self.model_cls,
@@ -268,7 +277,7 @@ class QuerySet:
             order_by=self._order_by,
         )
 
-    def order_by(self, order_by):
+    def order_by(self, *order_by):
         return self.__class__(
             model_cls=self.model_cls,
             filter_clauses=self.filter_clauses,
@@ -374,6 +383,12 @@ class QuerySet:
         instance = self.model_cls(**kwargs)
         instance.pk = await self.database.execute(expr)
         return instance
+
+    def _prepare_order_by(self, order_by: str):
+        reverse = order_by.startswith("-")
+        order_by = order_by.lstrip("-")
+        order_col = self.table.columns[order_by]
+        return order_col.desc() if reverse else order_col
 
 
 class Model(metaclass=ModelMeta):

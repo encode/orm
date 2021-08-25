@@ -4,6 +4,8 @@ import pytest
 import orm
 from tests.settings import DATABASE_URL
 
+pytestmark = pytest.mark.anyio
+
 database = databases.Database(DATABASE_URL)
 models = orm.ModelRegistry(database=database)
 
@@ -66,7 +68,6 @@ async def rollback_connections():
             yield
 
 
-@pytest.mark.asyncio
 async def test_model_crud():
     album = await Album.objects.create(name="Malibu")
     await Track.objects.create(album=album, title="The Bird", position=1)
@@ -82,7 +83,6 @@ async def test_model_crud():
     assert track.album.name == "Malibu"
 
 
-@pytest.mark.asyncio
 async def test_select_related():
     album = await Album.objects.create(name="Malibu")
     await Track.objects.create(album=album, title="The Bird", position=1)
@@ -103,7 +103,6 @@ async def test_select_related():
     assert len(tracks) == 6
 
 
-@pytest.mark.asyncio
 async def test_fk_filter():
     malibu = await Album.objects.create(name="Malibu")
     await Track.objects.create(album=malibu, title="The Bird", position=1)
@@ -146,7 +145,6 @@ async def test_fk_filter():
         assert track.album.name == "Malibu"
 
 
-@pytest.mark.asyncio
 async def test_multiple_fk():
     acme = await Organisation.objects.create(ident="ACME Ltd")
     red_team = await Team.objects.create(org=acme, name="Red Team")

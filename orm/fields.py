@@ -82,7 +82,7 @@ class Float(ModelField):
         return sqlalchemy.Float()
 
 
-class BigInteger(ModelField, typesystem.Integer):
+class BigInteger(ModelField):
     def get_validator(self, **kwargs) -> typesystem.Field:
         return typesystem.Integer(**kwargs)
 
@@ -171,3 +171,15 @@ class ForeignKey(ModelField):
         if isinstance(value, target):
             return value
         return target(pk=value)
+
+
+class Enum(ModelField):
+    def __init__(self, enum, **kwargs):
+        super().__init__(**kwargs)
+        self.enum = enum
+
+    def get_validator(self, **kwargs) -> typesystem.Field:
+        return typesystem.Any(**kwargs)
+
+    def get_column_type(self):
+        return sqlalchemy.Enum(self.enum)

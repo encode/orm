@@ -4,6 +4,8 @@ import pytest
 import orm
 from tests.settings import DATABASE_URL
 
+pytestmark = pytest.mark.anyio
+
 database = databases.Database(DATABASE_URL)
 models = orm.ModelRegistry(database=database)
 
@@ -62,7 +64,6 @@ def test_model_pk():
     assert user.id == 1
 
 
-@pytest.mark.asyncio
 async def test_model_crud():
     users = await User.objects.all()
     assert users == []
@@ -87,7 +88,6 @@ async def test_model_crud():
     assert users == []
 
 
-@pytest.mark.asyncio
 async def test_model_get():
     with pytest.raises(orm.NoMatch):
         await User.objects.get()
@@ -105,7 +105,6 @@ async def test_model_get():
     assert same_user.pk == user.pk
 
 
-@pytest.mark.asyncio
 async def test_model_filter():
     await User.objects.create(name="Tom")
     await User.objects.create(name="Jane")
@@ -145,15 +144,56 @@ async def test_model_filter():
     products = Product.objects.filter(name__icontains="%")
     assert await products.count() == 3
 
+    products = Product.objects.exclude(name__iexact="100%-cotton")
+    assert await products.count() == 5
 
-@pytest.mark.asyncio
+    products = Product.objects.exclude(name__contains="%")
+    assert await products.count() == 3
+
+    products = Product.objects.exclude(name__icontains="%")
+    assert await products.count() == 3
+
+
+async def test_model_order_by():
+    await User.objects.create(name="Bob")
+    await User.objects.create(name="Allen")
+    await User.objects.create(name="Bob")
+
+    users = await User.objects.order_by("name").all()
+    assert users[0].name == "Allen"
+    assert users[1].name == "Bob"
+
+    users = await User.objects.order_by("-name").all()
+    assert users[1].name == "Bob"
+    assert users[2].name == "Allen"
+
+    users = await User.objects.order_by("name", "-id").all()
+    assert users[0].name == "Allen"
+    assert users[0].id == 2
+    assert users[1].name == "Bob"
+    assert users[1].id == 3
+
+    users = await User.objects.filter(name="Bob").order_by("-id").all()
+    assert users[0].name == "Bob"
+    assert users[0].id == 3
+    assert users[1].name == "Bob"
+    assert users[1].id == 1
+
+    users = await User.objects.order_by("id").limit(1).all()
+    assert users[0].name == "Bob"
+    assert users[0].id == 1
+
+    users = await User.objects.order_by("id").limit(1).offset(1).all()
+    assert users[0].name == "Allen"
+    assert users[0].id == 2
+
+
 async def test_model_exists():
     await User.objects.create(name="Tom")
     assert await User.objects.filter(name="Tom").exists() is True
     assert await User.objects.filter(name="Jane").exists() is False
 
 
-@pytest.mark.asyncio
 async def test_model_count():
     await User.objects.create(name="Tom")
     await User.objects.create(name="Jane")
@@ -163,7 +203,6 @@ async def test_model_count():
     assert await User.objects.filter(name__icontains="T").count() == 1
 
 
-@pytest.mark.asyncio
 async def test_model_limit():
     await User.objects.create(name="Tom")
     await User.objects.create(name="Jane")
@@ -172,7 +211,6 @@ async def test_model_limit():
     assert len(await User.objects.limit(2).all()) == 2
 
 
-@pytest.mark.asyncio
 async def test_model_limit_with_filter():
     await User.objects.create(name="Tom")
     await User.objects.create(name="Tom")
@@ -181,7 +219,6 @@ async def test_model_limit_with_filter():
     assert len(await User.objects.limit(2).filter(name__iexact="Tom").all()) == 2
 
 
-@pytest.mark.asyncio
 async def test_offset():
     await User.objects.create(name="Tom")
     await User.objects.create(name="Jane")
@@ -190,7 +227,6 @@ async def test_offset():
     assert users[0].name == "Jane"
 
 
-@pytest.mark.asyncio
 async def test_model_first():
     tom = await User.objects.create(name="Tom")
     jane = await User.objects.create(name="Jane")
