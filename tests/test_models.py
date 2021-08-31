@@ -1,5 +1,6 @@
 import databases
 import pytest
+import typesystem
 
 import orm
 from tests.settings import DATABASE_URL
@@ -16,6 +17,7 @@ class User(orm.Model):
     fields = {
         "id": orm.Integer(primary_key=True),
         "name": orm.String(max_length=100),
+        "language": orm.String(max_length=100, allow_null=True),
     }
 
 
@@ -44,7 +46,7 @@ async def rollback_connections():
 
 
 def test_model_class():
-    assert list(User.fields.keys()) == ["id", "name"]
+    assert list(User.fields.keys()) == ["id", "name", "language"]
     assert isinstance(User.fields["id"], orm.Integer)
     assert User.fields["id"].primary_key is True
     assert isinstance(User.fields["name"], orm.String)
@@ -57,11 +59,15 @@ def test_model_class():
     assert User(id=1) != User(id=2)
     assert User(id=1) == User(id=1)
 
+    assert isinstance(User.objects.schema.fields["id"], typesystem.Integer)
+    assert isinstance(User.objects.schema.fields["name"], typesystem.String)
+
 
 def test_model_pk():
     user = User(pk=1)
     assert user.pk == 1
     assert user.id == 1
+    assert User.objects.pkname == "id"
 
 
 async def test_model_crud():
@@ -235,3 +241,12 @@ async def test_model_first():
     assert await User.objects.first(name="Jane") == jane
     assert await User.objects.filter(name="Jane").first() == jane
     assert await User.objects.filter(name="Lucy").first() is None
+
+
+async def test_model_search():
+    tom = await User.objects.create(name="Tom", language="English")
+    tshirt = await Product.objects.create(name="T-Shirt", rating=5)
+
+    assert await User.objects.search(term="").first() == tom
+    assert await User.objects.search(term="tom").first() == tom
+    assert await Product.objects.search(term="shirt").first() == tshirt

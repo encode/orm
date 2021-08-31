@@ -1,4 +1,5 @@
 import asyncio
+import typing
 
 import databases
 import sqlalchemy
@@ -24,16 +25,7 @@ class ModelRegistry:
     def __init__(self, database: databases.Database) -> None:
         self.database = database
         self.models = {}
-        self._metadata = sqlalchemy.MetaData()
-        self._loaded = False
-
-    @property
-    def metadata(self):
-        if not self._loaded:
-            for model_cls in self.models.values():
-                model_cls.table
-            self._loaded = True
-        return self._metadata
+        self.metadata = sqlalchemy.MetaData()
 
     def create_all(self):
         asyncio.run(self._create_all())
@@ -238,7 +230,7 @@ class QuerySet:
             order_by=self._order_by,
         )
 
-    def search(self, term):
+    def search(self, term: typing.Any):
         if not term:
             return self
 
@@ -371,9 +363,10 @@ class QuerySet:
         )
         kwargs = validator.validate(kwargs)
 
-        for key, value in fields.items():
-            if value.validator.read_only and value.validator.has_default():
-                kwargs[key] = value.validator.get_default_value()
+        # TODO: Better to implement after UUID, probably need another database
+        # for key, value in fields.items():
+        #     if value.validator.read_only and value.validator.has_default():
+        #         kwargs[key] = value.validator.get_default_value()
 
         # Build the insert expression.
         expr = self.table.insert()
@@ -415,7 +408,7 @@ class Model(metaclass=ModelMeta):
     @classmethod
     def build_table(cls):
         tablename = cls.tablename
-        metadata = cls.registry._metadata
+        metadata = cls.registry.metadata
         columns = []
         for name, field in cls.fields.items():
             columns.append(field.get_column(name))

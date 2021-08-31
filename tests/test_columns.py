@@ -51,7 +51,6 @@ async def rollback_transactions():
             yield
 
 
-@pytest.mark.asyncio
 async def test_model_crud():
     await Example.objects.create()
 
