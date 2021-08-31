@@ -95,6 +95,9 @@ notes = await Note.objects.order_by("name", "-id").all()
 # .get()
 note = await Note.objects.get(id=1)
 
+# .first()
+note = await Note.objects.filter(completed=True).first()
+
 # .update()
 await note.update(completed=True)
 
