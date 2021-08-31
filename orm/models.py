@@ -1,6 +1,6 @@
-import asyncio
 import typing
 
+import anyio
 import databases
 import sqlalchemy
 import typesystem
@@ -28,10 +28,10 @@ class ModelRegistry:
         self.metadata = sqlalchemy.MetaData()
 
     def create_all(self):
-        asyncio.run(self._create_all())
+        anyio.run(self._create_all)
 
     def drop_all(self):
-        asyncio.run(self._drop_all())
+        anyio.run(self._drop_all)
 
     async def _create_all(self):
         async with self.database:
