@@ -15,3 +15,8 @@ isort
 mypy
 pytest
 pytest-cov
+
+# Documentation
+mkdocs
+mkdocs-material
+mkautodoc
