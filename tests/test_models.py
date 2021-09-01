@@ -22,6 +22,7 @@ class User(orm.Model):
 
 
 class Product(orm.Model):
+    tablename = "products"
     registry = models
     fields = {
         "id": orm.Integer(primary_key=True),

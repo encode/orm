@@ -55,21 +55,20 @@ import orm
 import sqlalchemy
 
 database = databases.Database("sqlite:///db.sqlite")
-metadata = sqlalchemy.MetaData()
+models = orm.ModelRegistry(database=database)
 
 
 class Note(orm.Model):
-    __tablename__ = "notes"
-    __database__ = database
-    __metadata__ = metadata
+    tablename = "notes"
+    registry = models
+    fields = {
+        "id": orm.Integer(primary_key=True),
+        "text": orm.String(max_length=100),
+        "completed": orm.Boolean(default=False),
+    }
 
-    id = orm.Integer(primary_key=True)
-    text = orm.String(max_length=100)
-    completed = orm.Boolean(default=False)
-
-# Create the database
-engine = sqlalchemy.create_engine(str(database.url))
-metadata.create_all(engine)
+# Create the tables
+models.create_all()
 
 # .create()
 await Note.objects.create(text="Buy the groceries.", completed=False)
@@ -118,27 +117,27 @@ import orm
 import sqlalchemy
 
 database = databases.Database("sqlite:///db.sqlite")
-metadata = sqlalchemy.MetaData()
+models = orm.ModelRegistry(database=database)
 
 
 class Album(orm.Model):
-    __tablename__ = "album"
-    __metadata__ = metadata
-    __database__ = database
-
-    id = orm.Integer(primary_key=True)
-    name = orm.String(max_length=100)
+    tablename = "albums"
+    registry = models
+    fields = {
+        "id": orm.Integer(primary_key=True),
+        "name": orm.String(max_length=100),
+    }
 
 
 class Track(orm.Model):
-    __tablename__ = "track"
-    __metadata__ = metadata
-    __database__ = database
-
-    id = orm.Integer(primary_key=True)
-    album = orm.ForeignKey(Album)
-    title = orm.String(max_length=100)
-    position = orm.Integer()
+    tablename = "tracks"
+    registry = models
+    fields = {
+        "id": orm.Integer(primary_key=True),
+        "album": orm.ForeignKey(Album),
+        "title": orm.String(max_length=100),
+        "position": orm.Integer(),
+    }
 
 
 # Create some records to work with.
