@@ -126,3 +126,15 @@ class Enum(ModelField, typesystem.Any):
 
     def get_column_type(self):
         return sqlalchemy.Enum(self.enum)
+
+
+class Decimal(ModelField, typesystem.Decimal):
+    def __init__(self, max_digits: int, decimal_places: int, **kwargs):
+        assert max_digits, "max_digits is required"
+        assert decimal_places, "decimal_places is required"
+        self.max_digits = max_digits
+        self.decimal_places = decimal_places
+        super().__init__(**kwargs)
+
+    def get_column_type(self):
+        return sqlalchemy.Numeric(precision=self.max_digits, scale=self.decimal_places)

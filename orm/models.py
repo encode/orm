@@ -365,7 +365,7 @@ class Model(typesystem.Schema, metaclass=ModelMetaclass):
         row = await self.__database__.fetch_one(expr)
 
         # Update the instance.
-        for key, value in dict(row).items():
+        for key, value in dict(row._mapping).items():
             setattr(self, key, value)
 
     @classmethod

@@ -62,6 +62,7 @@ See `TypeSystem` for [type-specific validation keyword arguments][typesystem-fie
 * `orm.Boolean()`
 * `orm.Date()`
 * `orm.DateTime()`
+* `orm.Decimal()`
 * `orm.Enum()`
 * `orm.Float()`
 * `orm.Integer()`

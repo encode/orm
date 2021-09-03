@@ -1,4 +1,5 @@
-databases[sqlite]
+databases[postgresql]
+psycopg2
 typesystem
 
 # Packaging

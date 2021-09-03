@@ -5,6 +5,7 @@ from orm.fields import (
     Boolean,
     Date,
     DateTime,
+    Decimal,
     Enum,
     Float,
     ForeignKey,
@@ -15,7 +16,7 @@ from orm.fields import (
 )
 from orm.models import Model
 
-__version__ = "0.1.7"
+__version__ = "0.1.8"
 __all__ = [
     "NoMatch",
     "MultipleMatches",
@@ -23,6 +24,7 @@ __all__ = [
     "Boolean",
     "Date",
     "DateTime",
+    "Decimal",
     "Enum",
     "Float",
     "Integer",
