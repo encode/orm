@@ -1,0 +1,21 @@
+site_name: ORM
+site_description: An async ORM.
+
+theme:
+    name: 'material'
+
+repo_name: encode/orm
+repo_url: https://github.com/encode/orm
+# edit_uri: ""
+
+nav:
+    - Introduction: 'index.md'
+    - Declaring Models: 'declaring_models.md'
+    - Making Queries: 'making_queries.md'
+    - Relationships: 'relationships.md'
+
+markdown_extensions:
+  - mkautodoc
+  - admonition
+  - pymdownx.highlight
+  - pymdownx.superfences
