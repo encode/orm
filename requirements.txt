@@ -1,4 +1,6 @@
-databases[sqlite]
+databases[postgresql, mysql]
+psycopg2-binary
+pymysql
 typesystem
 
 # Packaging
@@ -15,3 +17,8 @@ isort
 mypy
 pytest
 pytest-cov
+
+# Documentation
+mkdocs
+mkdocs-material
+mkautodoc

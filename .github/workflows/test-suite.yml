@@ -14,7 +14,29 @@ jobs:
 
     strategy:
       matrix:
-        python-version: ["3.6", "3.7", "3.8", "3.9", "3.10.0-rc.1"]
+        python-version: ["3.6", "3.7", "3.8", "3.9"]
+
+    services:
+      mysql:
+          image: mysql:5.7
+          env:
+            MYSQL_USER: username
+            MYSQL_PASSWORD: password
+            MYSQL_ROOT_PASSWORD: password
+            MYSQL_DATABASE: testsuite
+          ports:
+            - 3306:3306
+          options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+      postgres:
+        image: postgres:10.8
+        env:
+          POSTGRES_USER: username
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: testsuite
+        ports:
+          - 5432:5432
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
 
     steps:
       - uses: "actions/checkout@v2"
@@ -27,7 +49,13 @@ jobs:
         run: "scripts/check"
       - name: "Build package & docs"
         run: "scripts/build"
-      - name: "Run tests"
+      - name: "Run tests with PostgreSQL"
+        env:
+          TEST_DATABASE_URL: "postgresql://username:password@localhost:5432/testsuite"
+        run: "scripts/test"
+      - name: "Run tests with MySQL"
+        env:
+          TEST_DATABASE_URL: "mysql://username:password@localhost:3306/testsuite"
         run: "scripts/test"
       - name: "Enforce coverage"
         run: "scripts/coverage"
