@@ -1,24 +1,23 @@
 import uuid
 
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.types import CHAR, TypeDecorator
+import sqlalchemy
 
 
-class GUID(TypeDecorator):
+class GUID(sqlalchemy.TypeDecorator):
     """Platform-independent GUID type.
 
     Uses PostgreSQL's UUID type, otherwise uses
     CHAR(32), storing as stringified hex values.
     """
 
-    impl = CHAR
+    impl = sqlalchemy.CHAR
     cache_ok = True
 
     def load_dialect_impl(self, dialect):
         if dialect.name == "postgresql":
-            return dialect.type_descriptor(UUID())
+            return dialect.type_descriptor(sqlalchemy.dialects.postgresql.UUID())
         else:
-            return dialect.type_descriptor(CHAR(32))
+            return dialect.type_descriptor(sqlalchemy.CHAR(32))
 
     def process_bind_param(self, value, dialect):
         if value is None:
