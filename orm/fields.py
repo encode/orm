@@ -3,6 +3,8 @@ import typing
 import sqlalchemy
 import typesystem
 
+from orm.sqlalchemy_fields import GUID
+
 
 class ModelField:
     def __init__(
@@ -138,3 +140,8 @@ class Decimal(ModelField, typesystem.Decimal):
 
     def get_column_type(self):
         return sqlalchemy.Numeric(precision=self.max_digits, scale=self.decimal_places)
+
+
+class UUID(ModelField, typesystem.UUID):
+    def get_column_type(self):
+        return GUID()

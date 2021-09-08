@@ -1,5 +1,6 @@
-databases[postgresql]
-psycopg2
+databases[postgresql, mysql]
+psycopg2-binary
+pymysql
 typesystem
 
 # Packaging

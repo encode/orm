@@ -1,5 +1,6 @@
 import datetime
 import decimal
+import uuid
 from enum import Enum
 
 import databases
@@ -30,6 +31,7 @@ class Example(orm.Model):
     __database__ = database
 
     id = orm.Integer(primary_key=True)
+    uuid = orm.UUID(allow_null=True)
     huge_number = orm.BigInteger(default=9223372036854775807)
     created = orm.DateTime(default=datetime.datetime.now)
     created_day = orm.Date(default=datetime.date.today)
@@ -43,7 +45,13 @@ class Example(orm.Model):
 
 @pytest.fixture(autouse=True, scope="module")
 def create_test_database():
-    engine = sqlalchemy.create_engine(DATABASE_URL)
+    database_url = databases.DatabaseURL(DATABASE_URL)
+    if database_url.scheme == "mysql":
+        url = str(database_url.replace(driver="pymysql"))
+    else:
+        url = str(database_url)
+
+    engine = sqlalchemy.create_engine(url)
     metadata.create_all(engine)
     yield
     metadata.drop_all(engine)
@@ -62,15 +70,19 @@ async def test_model_crud():
         assert example.price is None
         assert example.data == {}
         assert example.status == StatusEnum.DRAFT
+        assert example.uuid is None
 
         await example.update(
             data={"foo": 123},
             value=123.456,
             status=StatusEnum.RELEASED,
             price=decimal.Decimal("999.99"),
+            uuid=uuid.UUID("01175cde-c18f-4a13-a492-21bd9e1cb01b"),
         )
+
         example = await Example.objects.get()
         assert example.value == 123.456
         assert example.data == {"foo": 123}
         assert example.status == StatusEnum.RELEASED
         assert example.price == decimal.Decimal("999.99")
+        assert example.uuid == uuid.UUID("01175cde-c18f-4a13-a492-21bd9e1cb01b")

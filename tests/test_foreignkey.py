@@ -62,7 +62,13 @@ class Member(orm.Model):
 
 @pytest.fixture(autouse=True, scope="module")
 def create_test_database():
-    engine = sqlalchemy.create_engine(DATABASE_URL)
+    database_url = databases.DatabaseURL(DATABASE_URL)
+    if database_url.scheme == "mysql":
+        url = str(database_url.replace(driver="pymysql"))
+    else:
+        url = str(database_url)
+
+    engine = sqlalchemy.create_engine(url)
     metadata.create_all(engine)
     yield
     metadata.drop_all(engine)

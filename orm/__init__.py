@@ -1,6 +1,7 @@
 from orm.exceptions import MultipleMatches, NoMatch
 from orm.fields import (
     JSON,
+    UUID,
     BigInteger,
     Boolean,
     Date,
@@ -28,10 +29,11 @@ __all__ = [
     "Enum",
     "Float",
     "Integer",
+    "JSON",
     "String",
     "Text",
     "Time",
-    "JSON",
+    "UUID",
     "ForeignKey",
     "Model",
 ]

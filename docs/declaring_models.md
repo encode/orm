@@ -69,6 +69,7 @@ See `TypeSystem` for [type-specific validation keyword arguments][typesystem-fie
 * `orm.String(max_length)`
 * `orm.Text()`
 * `orm.Time()`
+* `orm.UUID()`
 * `orm.JSON()`
 
 [psycopg2]: https://www.psycopg.org/
