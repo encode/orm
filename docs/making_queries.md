@@ -140,6 +140,14 @@ await Note.objects.order_by("id").limit(1).offset(1).all()
 await Note.objects.filter(text__icontains="mum").limit(2).all()
 ```
 
+#### .exists()
+
+To check if any instances matching the query exist. Returns `True` or `False`.
+
+```python
+await Note.objects.filter(completed=True).exists()
+```
+
 ### Updating instances
 
 `.update()` method is defined on model instances.

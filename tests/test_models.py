@@ -246,3 +246,14 @@ async def test_model_first():
         assert await User.objects.first(name="Jane") == jane
         assert await User.objects.filter(name="Jane").first() == jane
         assert await User.objects.filter(name="Lucy").first() is None
+
+
+async def test_model_get_or_create():
+    async with database:
+        user, created = await User.objects.get_or_create(name="Tom")
+
+        assert created is True
+        assert await User.objects.get(pk=user.id) == user
+
+        user, created = await User.objects.get_or_create(name="Tom")
+        assert created is False
