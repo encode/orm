@@ -65,8 +65,6 @@ def create_test_database():
     database_url = databases.DatabaseURL(DATABASE_URL)
     if database_url.scheme == "mysql":
         url = str(database_url.replace(driver="pymysql"))
-    elif database_url.scheme == "postgresql+aiopg":
-        url = str(database_url.replace(driver=None))
     else:
         url = str(database_url)
 
