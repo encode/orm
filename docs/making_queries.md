@@ -177,3 +177,16 @@ Then delete the instance:
 ```python
 await note.delete()
 ```
+
+### Convenience methods
+
+#### get_or_create()
+
+To get an existing instance matching the query, or create a new one.
+This will retuurn a tuple of `instance` and `created`.
+
+```python
+note, created = await Note.objects.get_or_create(text="Going to car wash")
+```
+
+**Note**: Since this is doing a [get()](#get), it can raise `MultipleMatches` exception.
