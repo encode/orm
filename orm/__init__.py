@@ -17,7 +17,7 @@ from orm.fields import (
 )
 from orm.models import Model
 
-__version__ = "0.1.8"
+__version__ = "0.1.9"
 __all__ = [
     "NoMatch",
     "MultipleMatches",
