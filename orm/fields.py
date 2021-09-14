@@ -187,7 +187,7 @@ class Enum(ModelField):
         return sqlalchemy.Enum(self.enum)
 
 
-class Decimal(ModelField, typesystem.Decimal):
+class Decimal(ModelField):
     def __init__(self, max_digits: int, decimal_places: int, **kwargs):
         assert max_digits, "max_digits is required"
         assert decimal_places, "decimal_places is required"
@@ -195,10 +195,16 @@ class Decimal(ModelField, typesystem.Decimal):
         self.decimal_places = decimal_places
         super().__init__(**kwargs)
 
+    def get_validator(self, **kwargs) -> typesystem.Field:
+        return typesystem.Decimal(**kwargs)
+
     def get_column_type(self):
         return sqlalchemy.Numeric(precision=self.max_digits, scale=self.decimal_places)
 
 
-class UUID(ModelField, typesystem.UUID):
+class UUID(ModelField):
+    def get_validator(self, **kwargs) -> typesystem.Field:
+        return typesystem.UUID(**kwargs)
+
     def get_column_type(self):
         return GUID()

@@ -4,6 +4,7 @@ import anyio
 import databases
 import sqlalchemy
 import typesystem
+from sqlalchemy.ext.asyncio import create_async_engine
 
 from orm.exceptions import MultipleMatches, NoMatch
 from orm.fields import String, Text
@@ -28,22 +29,47 @@ class ModelRegistry:
         self.metadata = sqlalchemy.MetaData()
 
     def create_all(self):
-        anyio.run(self._create_all)
+        url = self._get_database_url()
+        anyio.run(self._create_all, url)
 
     def drop_all(self):
-        anyio.run(self._drop_all)
+        url = self._get_database_url()
+        anyio.run(self._drop_all, url)
 
-    async def _create_all(self):
-        async with self.database:
-            for model_cls in self.models.values():
-                expr = sqlalchemy.schema.CreateTable(model_cls.table)
-                await self.database.execute(str(expr))
+    async def _create_all(self, url: str):
+        engine = create_async_engine(url)
 
-    async def _drop_all(self):
+        for model_cls in self.models.values():
+            model_cls.build_table()
+
         async with self.database:
-            for model_cls in self.models.values():
-                expr = sqlalchemy.schema.DropTable(model_cls.table)
-                await self.database.execute(str(expr))
+            async with engine.begin() as conn:
+                await conn.run_sync(self.metadata.create_all)
+
+        await engine.dispose()
+
+    async def _drop_all(self, url: str):
+        engine = create_async_engine(url)
+
+        for model_cls in self.models.values():
+            model_cls.build_table()
+
+        async with self.database:
+            async with engine.begin() as conn:
+                await conn.run_sync(self.metadata.drop_all)
+
+        await engine.dispose()
+
+    def _get_database_url(self) -> str:
+        url = self.database.url
+        if not url.driver:
+            if url.dialect == "postgresql":
+                url = url.replace(driver="asyncpg")
+            elif url.dialect == "mysql":
+                url = url.replace(driver="aiomysql")
+            elif url.dialect == "sqlite":
+                url = url.replace(driver="aiosqlite")
+        return str(url)
 
 
 class ModelMeta(type):
@@ -420,7 +446,7 @@ class Model(metaclass=ModelMeta):
         columns = []
         for name, field in cls.fields.items():
             columns.append(field.get_column(name))
-        return sqlalchemy.Table(tablename, metadata, *columns)
+        return sqlalchemy.Table(tablename, metadata, *columns, extend_existing=True)
 
     @property
     def table(self):

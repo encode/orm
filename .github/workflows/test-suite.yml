@@ -57,5 +57,9 @@ jobs:
         env:
           TEST_DATABASE_URL: "mysql://username:password@localhost:3306/testsuite"
         run: "scripts/test"
+      - name: "Run tests with SQLite"
+        env:
+          TEST_DATABASE_URL: "sqlite:///testsuite"
+        run: "scripts/test"
       - name: "Enforce coverage"
         run: "scripts/coverage"

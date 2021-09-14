@@ -32,7 +32,7 @@ class Product(orm.Model):
     }
 
 
-@pytest.fixture(autouse=True, scope="module")
+@pytest.fixture(autouse=True, scope="function")
 def create_test_database():
     models.create_all()
     yield
