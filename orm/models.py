@@ -377,6 +377,14 @@ class QuerySet:
         instance.pk = await self.database.execute(expr)
         return instance
 
+    async def get_or_create(self, **kwargs) -> typing.Tuple[typing.Any, bool]:
+        try:
+            instance = await self.get(**kwargs)
+            return instance, False
+        except NoMatch:
+            instance = await self.create(**kwargs)
+            return instance, True
+
     def _prepare_order_by(self, order_by: str):
         reverse = order_by.startswith("-")
         order_by = order_by.lstrip("-")
@@ -455,7 +463,7 @@ class Model(metaclass=ModelMeta):
         row = await self.database.fetch_one(expr)
 
         # Update the instance.
-        for key, value in dict(row).items():
+        for key, value in dict(row._mapping).items():
             setattr(self, key, value)
 
     @classmethod

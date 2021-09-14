@@ -3,6 +3,8 @@ import typing
 import sqlalchemy
 import typesystem
 
+from orm.sqlalchemy_fields import GUID
+
 
 class ModelField:
     def __init__(
@@ -183,3 +185,20 @@ class Enum(ModelField):
 
     def get_column_type(self):
         return sqlalchemy.Enum(self.enum)
+
+
+class Decimal(ModelField, typesystem.Decimal):
+    def __init__(self, max_digits: int, decimal_places: int, **kwargs):
+        assert max_digits, "max_digits is required"
+        assert decimal_places, "decimal_places is required"
+        self.max_digits = max_digits
+        self.decimal_places = decimal_places
+        super().__init__(**kwargs)
+
+    def get_column_type(self):
+        return sqlalchemy.Numeric(precision=self.max_digits, scale=self.decimal_places)
+
+
+class UUID(ModelField, typesystem.UUID):
+    def get_column_type(self):
+        return GUID()

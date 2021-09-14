@@ -251,3 +251,14 @@ async def test_model_search():
     assert await User.objects.search(term="").first() == tom
     assert await User.objects.search(term="tom").first() == tom
     assert await Product.objects.search(term="shirt").first() == tshirt
+
+
+async def test_model_get_or_create():
+    async with database:
+        user, created = await User.objects.get_or_create(name="Tom")
+
+        assert created is True
+        assert await User.objects.get(pk=user.id) == user
+
+        user, created = await User.objects.get_or_create(name="Tom")
+        assert created is False

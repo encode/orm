@@ -55,20 +55,20 @@ import orm
 import sqlalchemy
 
 database = databases.Database("sqlite:///db.sqlite")
-models = orm.ModelRegistry(database=database)
+metadata = sqlalchemy.MetaData()
 
 
 class Note(orm.Model):
-    tablename = "notes"
-    registry = models
-    fields = {
-        "id": orm.Integer(primary_key=True),
-        "text": orm.String(max_length=100),
-        "completed": orm.Boolean(default=False),
-    }
+    __tablename__ = "notes"
+    __database__ = database
+    __metadata__ = metadata
+    id = orm.Integer(primary_key=True)
+    text = orm.String(max_length=100)
+    completed = orm.Boolean(default=False)
 
-# Create the tables
-models.create_all()
+# Create the database and tables
+engine = sqlalchemy.create_engine(str(database.url))
+metadata.create_all(engine)
 
 await Note.objects.create(text="Buy the groceries.", completed=False)
 
