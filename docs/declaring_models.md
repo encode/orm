@@ -1,42 +1,39 @@
 ## Declaring models
 
 You can define models by inheriting from `orm.Model` and
-defining model fields as attributes in the class.
+defining model fields in the `fields` attribute.
 For each defined model you need to set two special variables:
 
-* `__database__` for database connection.
-* `__metadata__` for `SQLAlchemy` functions and migrations.
+* `registry` an instance of `orm.ModelRegistry`
+* `fields` a `dict` of `orm` fields
 
-You can also specify the table name in database by setting `__tablename__` attribute.
+You can also specify the table name in database by setting `tablename` attribute.
 
 ```python
 import databases
 import orm
-import sqlalchemy
 
 database = databases.Database("sqlite:///db.sqlite")
-metadata = sqlalchemy.MetaData()
+models = orm.ModelRegistry(database=database)
 
 
 class Note(orm.Model):
-    __tablename__ = "notes"
-    __database__ = database
-    __metadata__ = metadata
-
-    id = orm.Integer(primary_key=True)
-    text = orm.String(max_length=100)
-    completed = orm.Boolean(default=False)
+    tablename = "notes"
+    registry = models
+    fields = {
+        "id": orm.Integer(primary_key=True),
+        "text": orm.String(max_length=100),
+        "completed": orm.Boolean(default=False),
+    }
 ```
 
 ORM can create or drop database and tables from models using SQLAlchemy.
-For using these functions or `Alembic` migrations, you still have to
-install a synchronous DB driver: [psycopg2][psycopg2] for PostgreSQL and [pymysql][pymysql] for MySQL.
-
-Afer installing a synchronous DB driver, you can create tables for the models using:
+You can use the following methods:
 
 ```python
-engine = sqlalchemy.create_engine(str(database.url))
-metadata.create_all(engine)
+models.create_all()
+
+models.drop_all()
 ```
 
 ## Data types
@@ -72,6 +69,4 @@ See `TypeSystem` for [type-specific validation keyword arguments][typesystem-fie
 * `orm.UUID()`
 * `orm.JSON()`
 
-[psycopg2]: https://www.psycopg.org/
-[pymysql]: https://github.com/PyMySQL/PyMySQL
 [typesystem-fields]: https://www.encode.io/typesystem/fields/

@@ -7,20 +7,19 @@ Let's say you have the following model defined:
 ```python
 import databases
 import orm
-import sqlalchemy
 
 database = databases.Database("sqlite:///db.sqlite")
-metadata = sqlalchemy.MetaData()
+models = orm.ModelRegistry(database=database)
 
 
 class Note(orm.Model):
-    __tablename__ = "notes"
-    __database__ = database
-    __metadata__ = metadata
-
-    id = orm.Integer(primary_key=True)
-    text = orm.String(max_length=100)
-    completed = orm.Boolean(default=False)
+    tablename = "notes"
+    registry = models
+    fields = {
+        "id": orm.Integer(primary_key=True),
+        "text": orm.String(max_length=100),
+        "completed": orm.Boolean(default=False),
+    }
 ```
 
 You can use the following queryset methods:

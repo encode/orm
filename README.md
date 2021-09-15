@@ -51,7 +51,6 @@ Driver support is provided using one of [asyncpg][asyncpg], [aiomysql][aiomysql]
 ```python
 import databases
 import orm
-import sqlalchemy
 
 database = databases.Database("sqlite:///db.sqlite")
 models = orm.ModelRegistry(database=database)

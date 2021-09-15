@@ -51,23 +51,22 @@ Driver support is provided using one of [asyncpg][asyncpg], [aiomysql][aiomysql]
 ```python
 import databases
 import orm
-import sqlalchemy
 
 database = databases.Database("sqlite:///db.sqlite")
-metadata = sqlalchemy.MetaData()
+models = orm.ModelRegistry(database=database)
 
 
 class Note(orm.Model):
-    __tablename__ = "notes"
-    __database__ = database
-    __metadata__ = metadata
-    id = orm.Integer(primary_key=True)
-    text = orm.String(max_length=100)
-    completed = orm.Boolean(default=False)
+    tablename = "notes"
+    registry = models
+    fields = {
+        "id": orm.Integer(primary_key=True),
+        "text": orm.String(max_length=100),
+        "completed": orm.Boolean(default=False),
+    }
 
 # Create the database and tables
-engine = sqlalchemy.create_engine(str(database.url))
-metadata.create_all(engine)
+models.create_all()
 
 await Note.objects.create(text="Buy the groceries.", completed=False)
 

@@ -7,30 +7,29 @@ Let's say you have the following models defined:
 ```python
 import databases
 import orm
-import sqlalchemy
 
 database = databases.Database("sqlite:///db.sqlite")
-metadata = sqlalchemy.MetaData()
+models = orm.ModelRegistry(database=database)
 
 
 class Album(orm.Model):
-    __tablename__ = "album"
-    __metadata__ = metadata
-    __database__ = database
+    tablename = "albums"
+    registry = models
+    fields = {
+        "id": orm.Integer(primary_key=True),
+        "name": orm.String(max_length=100),
+    }
 
-    id = orm.Integer(primary_key=True)
-    name = orm.String(max_length=100)
 
-
-class Track(orm.Model):
-    __tablename__ = "track"
-    __metadata__ = metadata
-    __database__ = database
-
-    id = orm.Integer(primary_key=True)
-    album = orm.ForeignKey(Album)
-    title = orm.String(max_length=100)
-    position = orm.Integer()
+class Album(orm.Model):
+    tablename = "tracks"
+    registry = models
+    fields = {
+        "id": orm.Integer(primary_key=True),
+        "album": orm.ForeignKey(Album),
+        "title": orm.String(max_length=100),
+        "position": orm.Integer(),
+    }
 ```
 
 You can create some `Album` and `Track` instances:
