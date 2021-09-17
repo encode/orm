@@ -10,6 +10,7 @@ from setuptools import setup
 PACKAGE = "orm"
 URL = "https://github.com/encode/orm"
 
+
 def get_version(package):
     """
     Return package version as listed in `__version__` in `init.py`.
@@ -50,12 +51,12 @@ setup(
     packages=get_packages(PACKAGE),
     package_data={PACKAGE: ["py.typed"]},
     data_files=[("", ["LICENSE.md"])],
-    install_requires=["databases>=0.2.1", "typesystem"],
+    install_requires=["anyio>=3.0.0,<4", "databases>=0.5.0", "typesystem>=0.3.0"],
     extras_require={
         "postgresql": ["asyncpg"],
         "mysql": ["aiomysql"],
         "sqlite": ["aiosqlite"],
-        "postgresql+aiopg": ["aiopg"]
+        "postgresql+aiopg": ["aiopg"],
     },
     classifiers=[
         "Development Status :: 3 - Alpha",

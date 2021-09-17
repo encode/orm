@@ -1,10 +1,13 @@
 import typing
 
+import anyio
+import databases
 import sqlalchemy
 import typesystem
-from typesystem.schemas import SchemaMetaclass
+from sqlalchemy.ext.asyncio import create_async_engine
 
 from orm.exceptions import MultipleMatches, NoMatch
+from orm.fields import String, Text
 
 FILTER_OPERATORS = {
     "exact": "__eq__",
@@ -19,31 +22,79 @@ FILTER_OPERATORS = {
 }
 
 
-class ModelMetaclass(SchemaMetaclass):
-    def __new__(
-        cls: type, name: str, bases: typing.Sequence[type], attrs: dict
-    ) -> type:
-        new_model = super(ModelMetaclass, cls).__new__(  # type: ignore
-            cls, name, bases, attrs
-        )
+class ModelRegistry:
+    def __init__(self, database: databases.Database) -> None:
+        self.database = database
+        self.models = {}
+        self.metadata = sqlalchemy.MetaData()
 
-        if attrs.get("__abstract__"):
-            return new_model
+    def create_all(self):
+        url = self._get_database_url()
+        anyio.run(self._create_all, url)
 
-        tablename = attrs["__tablename__"]
-        metadata = attrs["__metadata__"]
-        pkname = None
+    def drop_all(self):
+        url = self._get_database_url()
+        anyio.run(self._drop_all, url)
 
-        columns = []
-        for name, field in new_model.fields.items():
+    async def _create_all(self, url: str):
+        engine = create_async_engine(url)
+
+        for model_cls in self.models.values():
+            model_cls.build_table()
+
+        async with self.database:
+            async with engine.begin() as conn:
+                await conn.run_sync(self.metadata.create_all)
+
+        await engine.dispose()
+
+    async def _drop_all(self, url: str):
+        engine = create_async_engine(url)
+
+        for model_cls in self.models.values():
+            model_cls.build_table()
+
+        async with self.database:
+            async with engine.begin() as conn:
+                await conn.run_sync(self.metadata.drop_all)
+
+        await engine.dispose()
+
+    def _get_database_url(self) -> str:
+        url = self.database.url
+        if not url.driver:
+            if url.dialect == "postgresql":
+                url = url.replace(driver="asyncpg")
+            elif url.dialect == "mysql":
+                url = url.replace(driver="aiomysql")
+            elif url.dialect == "sqlite":
+                url = url.replace(driver="aiosqlite")
+        return str(url)
+
+
+class ModelMeta(type):
+    def __new__(cls, name, bases, attrs):
+        model_class = super().__new__(cls, name, bases, attrs)
+
+        if "registry" in attrs:
+            model_class.database = attrs["registry"].database
+            attrs["registry"].models[name] = model_class
+
+            if "tablename" not in attrs:
+                setattr(model_class, "tablename", name.lower())
+
+        for name, field in attrs.get("fields", {}).items():
+            setattr(field, "registry", attrs.get("registry"))
             if field.primary_key:
-                pkname = name
-            columns.append(field.get_column(name))
+                model_class.pkname = name
 
-        new_model.__table__ = sqlalchemy.Table(tablename, metadata, *columns)
-        new_model.__pkname__ = pkname
+        return model_class
 
-        return new_model
+    @property
+    def table(cls):
+        if not hasattr(cls, "_table"):
+            cls._table = cls.build_table()
+        return cls._table
 
 
 class QuerySet:
@@ -70,11 +121,20 @@ class QuerySet:
 
     @property
     def database(self):
-        return self.model_cls.__database__
+        return self.model_cls.registry.database
 
     @property
     def table(self):
-        return self.model_cls.__table__
+        return self.model_cls.table
+
+    @property
+    def schema(self):
+        fields = {key: field.validator for key, field in self.model_cls.fields.items()}
+        return typesystem.Schema(fields=fields)
+
+    @property
+    def pkname(self):
+        return self.model_cls.pkname
 
     def build_select_expression(self):
         tables = [self.table]
@@ -84,9 +144,10 @@ class QuerySet:
             model_cls = self.model_cls
             select_from = self.table
             for part in item.split("__"):
-                model_cls = model_cls.fields[part].to
-                select_from = sqlalchemy.sql.join(select_from, model_cls.__table__)
-                tables.append(model_cls.__table__)
+                model_cls = model_cls.fields[part].target
+                table = model_cls.table
+                select_from = sqlalchemy.sql.join(select_from, table)
+                tables.append(table)
 
         expr = sqlalchemy.sql.select(tables)
         expr = expr.select_from(select_from)
@@ -122,7 +183,7 @@ class QuerySet:
         select_related = list(self._select_related)
 
         if kwargs.get("pk"):
-            pk_name = self.model_cls.__pkname__
+            pk_name = self.model_cls.pkname
             kwargs[pk_name] = kwargs.pop("pk")
 
         for key, value in kwargs.items():
@@ -150,9 +211,9 @@ class QuerySet:
                     # Walk the relationships to the actual model class
                     # against which the comparison is being made.
                     for part in related_parts:
-                        model_cls = model_cls.fields[part].to
+                        model_cls = model_cls.fields[part].target
 
-                column = model_cls.__table__.columns[field_name]
+                column = model_cls.table.columns[field_name]
 
             else:
                 op = "exact"
@@ -195,15 +256,40 @@ class QuerySet:
             order_by=self._order_by,
         )
 
-    def select_related(self, related):
-        if not isinstance(related, (list, tuple)):
-            related = [related]
+    def search(self, term: typing.Any):
+        if not term:
+            return self
 
-        related = list(self._select_related) + related
+        filter_clauses = list(self.filter_clauses)
+        value = f"%{term}%"
+
+        # has_escaped_character = any(c for c in self.ESCAPE_CHARACTERS if c in term)
+        # if has_escaped_character:
+        #     # enable escape modifier
+        #     for char in self.ESCAPE_CHARACTERS:
+        #         term = term.replace(char, f'\\{char}')
+        #     term = f"%{value}%"
+        #
+        # clause.modifiers['escape'] = '\\' if has_escaped_character else None
+
+        search_fields = [
+            name
+            for name, field in self.model_cls.fields.items()
+            if isinstance(field, (String, Text))
+        ]
+        search_clauses = [
+            self.table.columns[name].ilike(value) for name in search_fields
+        ]
+
+        if len(search_clauses) > 1:
+            filter_clauses.append(sqlalchemy.sql.or_(*search_clauses))
+        else:
+            filter_clauses.extend(search_clauses)
+
         return self.__class__(
             model_cls=self.model_cls,
-            filter_clauses=self.filter_clauses,
-            select_related=related,
+            filter_clauses=filter_clauses,
+            select_related=self._select_related,
             limit_count=self.limit_count,
             offset=self.query_offset,
             order_by=self._order_by,
@@ -217,6 +303,20 @@ class QuerySet:
             limit_count=self.limit_count,
             offset=self.query_offset,
             order_by=order_by,
+        )
+
+    def select_related(self, related):
+        if not isinstance(related, (list, tuple)):
+            related = [related]
+
+        related = list(self._select_related) + related
+        return self.__class__(
+            model_cls=self.model_cls,
+            filter_clauses=self.filter_clauses,
+            select_related=related,
+            limit_count=self.limit_count,
+            offset=self.query_offset,
+            order_by=self._order_by,
         )
 
     async def exists(self) -> bool:
@@ -284,24 +384,22 @@ class QuerySet:
     async def create(self, **kwargs):
         # Validate the keyword arguments.
         fields = self.model_cls.fields
-        required = [key for key, value in fields.items() if not value.has_default()]
-        validator = typesystem.Object(
-            properties=fields, required=required, additional_properties=False
+        validator = typesystem.Schema(
+            fields={key: value.validator for key, value in fields.items()}
         )
         kwargs = validator.validate(kwargs)
 
-        # Remove primary key when None to prevent not null constraint in postgresql.
-        pkname = self.model_cls.__pkname__
-        pk = self.model_cls.fields[pkname]
-        if kwargs[pkname] is None and pk.allow_null:
-            del kwargs[pkname]
+        # TODO: Better to implement after UUID, probably need another database
+        # for key, value in fields.items():
+        #     if value.validator.read_only and value.validator.has_default():
+        #         kwargs[key] = value.validator.get_default_value()
 
         # Build the insert expression.
         expr = self.table.insert()
         expr = expr.values(**kwargs)
 
         # Execute the insert, and return a new model instance.
-        instance = self.model_cls(kwargs)
+        instance = self.model_cls(**kwargs)
         instance.pk = await self.database.execute(expr)
         return instance
 
@@ -320,37 +418,55 @@ class QuerySet:
         return order_col.desc() if reverse else order_col
 
 
-class Model(typesystem.Schema, metaclass=ModelMetaclass):
-    __abstract__ = True
-
+class Model(metaclass=ModelMeta):
     objects = QuerySet()
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, **kwargs):
         if "pk" in kwargs:
-            kwargs[self.__pkname__] = kwargs.pop("pk")
-        super().__init__(*args, **kwargs)
+            kwargs[self.pkname] = kwargs.pop("pk")
+        for key, value in kwargs.items():
+            if key not in self.fields:
+                raise ValueError(
+                    f"Invalid keyword {key} for class {self.__class__.__name__}"
+                )
+            setattr(self, key, value)
 
     @property
     def pk(self):
-        return getattr(self, self.__pkname__)
+        return getattr(self, self.pkname)
 
     @pk.setter
     def pk(self, value):
-        setattr(self, self.__pkname__, value)
+        setattr(self, self.pkname, value)
+
+    @classmethod
+    def build_table(cls):
+        tablename = cls.tablename
+        metadata = cls.registry.metadata
+        columns = []
+        for name, field in cls.fields.items():
+            columns.append(field.get_column(name))
+        return sqlalchemy.Table(tablename, metadata, *columns, extend_existing=True)
+
+    @property
+    def table(self):
+        return self.__class__.table
 
     async def update(self, **kwargs):
         # Validate the keyword arguments.
-        fields = {key: field for key, field in self.fields.items() if key in kwargs}
-        validator = typesystem.Object(properties=fields)
+        fields = {
+            key: field.validator for key, field in self.fields.items() if key in kwargs
+        }
+        validator = typesystem.Schema(fields=fields)
         kwargs = validator.validate(kwargs)
 
         # Build the update expression.
-        pk_column = getattr(self.__table__.c, self.__pkname__)
-        expr = self.__table__.update()
+        pk_column = getattr(self.table.c, self.pkname)
+        expr = self.table.update()
         expr = expr.values(**kwargs).where(pk_column == self.pk)
 
         # Perform the update.
-        await self.__database__.execute(expr)
+        await self.database.execute(expr)
 
         # Update the model instance.
         for key, value in kwargs.items():
@@ -358,19 +474,19 @@ class Model(typesystem.Schema, metaclass=ModelMetaclass):
 
     async def delete(self):
         # Build the delete expression.
-        pk_column = getattr(self.__table__.c, self.__pkname__)
-        expr = self.__table__.delete().where(pk_column == self.pk)
+        pk_column = getattr(self.table.c, self.pkname)
+        expr = self.table.delete().where(pk_column == self.pk)
 
         # Perform the delete.
-        await self.__database__.execute(expr)
+        await self.database.execute(expr)
 
     async def load(self):
         # Build the select expression.
-        pk_column = getattr(self.__table__.c, self.__pkname__)
-        expr = self.__table__.select().where(pk_column == self.pk)
+        pk_column = getattr(self.table.c, self.pkname)
+        expr = self.table.select().where(pk_column == self.pk)
 
         # Perform the fetch.
-        row = await self.__database__.fetch_one(expr)
+        row = await self.database.fetch_one(expr)
 
         # Update the instance.
         for key, value in dict(row._mapping).items():
@@ -387,18 +503,18 @@ class Model(typesystem.Schema, metaclass=ModelMetaclass):
         for related in select_related:
             if "__" in related:
                 first_part, remainder = related.split("__", 1)
-                model_cls = cls.fields[first_part].to
+                model_cls = cls.fields[first_part].target
                 item[first_part] = model_cls.from_row(row, select_related=[remainder])
             else:
-                model_cls = cls.fields[related].to
+                model_cls = cls.fields[related].target
                 item[related] = model_cls.from_row(row)
 
         # Pull out the regular column values.
-        for column in cls.__table__.columns:
+        for column in cls.table.columns:
             if column.name not in item:
                 item[column.name] = row[column]
 
-        return cls(item)
+        return cls(**item)
 
     def __setattr__(self, key, value):
         if key in self.fields:
@@ -406,3 +522,11 @@ class Model(typesystem.Schema, metaclass=ModelMetaclass):
             # fully-fledged relationship instance, with just the pk loaded.
             value = self.fields[key].expand_relationship(value)
         super().__setattr__(key, value)
+
+    def __eq__(self, other):
+        if self.__class__ != other.__class__:
+            return False
+        for key in self.fields.keys():
+            if getattr(self, key, None) != getattr(other, key, None):
+                return False
+        return True

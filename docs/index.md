@@ -41,7 +41,6 @@ $ pip install orm[sqlite]
 ```
 
 Driver support is provided using one of [asyncpg][asyncpg], [aiomysql][aiomysql], or [aiosqlite][aiosqlite].
-Note that if you are using any synchronous SQLAlchemy functions such as `engine.create_all()` or [alembic][alembic] migrations then you still have to install a synchronous DB driver: [psycopg2][psycopg2] for PostgreSQL and [pymysql][pymysql] for MySQL.
 
 ---
 
@@ -52,23 +51,22 @@ Note that if you are using any synchronous SQLAlchemy functions such as `engine.
 ```python
 import databases
 import orm
-import sqlalchemy
 
 database = databases.Database("sqlite:///db.sqlite")
-metadata = sqlalchemy.MetaData()
+models = orm.ModelRegistry(database=database)
 
 
 class Note(orm.Model):
-    __tablename__ = "notes"
-    __database__ = database
-    __metadata__ = metadata
-    id = orm.Integer(primary_key=True)
-    text = orm.String(max_length=100)
-    completed = orm.Boolean(default=False)
+    tablename = "notes"
+    registry = models
+    fields = {
+        "id": orm.Integer(primary_key=True),
+        "text": orm.String(max_length=100),
+        "completed": orm.Boolean(default=False),
+    }
 
 # Create the database and tables
-engine = sqlalchemy.create_engine(str(database.url))
-metadata.create_all(engine)
+models.create_all()
 
 await Note.objects.create(text="Buy the groceries.", completed=False)
 
@@ -78,9 +76,6 @@ print(note)
 ```
 
 [sqlalchemy-core]: https://docs.sqlalchemy.org/en/latest/core/
-[alembic]: https://alembic.sqlalchemy.org/en/latest/
-[psycopg2]: https://www.psycopg.org/
-[pymysql]: https://github.com/PyMySQL/PyMySQL
 [asyncpg]: https://github.com/MagicStack/asyncpg
 [aiomysql]: https://github.com/aio-libs/aiomysql
 [aiosqlite]: https://github.com/jreese/aiosqlite
