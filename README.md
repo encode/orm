@@ -22,7 +22,7 @@ MySQL, and SQLite. ORM is built with:
 Because ORM is built on SQLAlchemy core, you can use Alembic to provide
 database migrations.
 
-**ORM is still under development: We recommend pinning any dependencies with `orm~=0.1`**
+**ORM is still under development: We recommend pinning any dependencies with `orm~=0.2`**
 
 ---
 
