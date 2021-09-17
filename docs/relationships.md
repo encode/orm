@@ -21,7 +21,7 @@ class Album(orm.Model):
     }
 
 
-class Album(orm.Model):
+class Track(orm.Model):
     tablename = "tracks"
     registry = models
     fields = {
