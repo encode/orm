@@ -402,7 +402,7 @@ class QuerySet:
         instance.pk = await self.database.execute(expr)
         return instance
 
-    async def delete(self, **kwargs):
+    async def delete(self, **kwargs) -> None:
         if kwargs:
             return await self.filter(**kwargs).delete()
 
@@ -410,7 +410,7 @@ class QuerySet:
         for filter_clause in self.filter_clauses:
             expr = expr.where(filter_clause)
 
-        return await self.database.fetch_val(expr)
+        return await self.database.execute(expr)
 
     async def get_or_create(self, **kwargs) -> typing.Tuple[typing.Any, bool]:
         try:
@@ -481,12 +481,10 @@ class Model(metaclass=ModelMeta):
         for key, value in kwargs.items():
             setattr(self, key, value)
 
-    async def delete(self):
-        # Build the delete expression.
+    async def delete(self) -> None:
         pk_column = getattr(self.table.c, self.pkname)
         expr = self.table.delete().where(pk_column == self.pk)
 
-        # Perform the delete.
         await self.database.execute(expr)
 
     async def load(self):
