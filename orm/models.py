@@ -402,7 +402,7 @@ class QuerySet:
         instance.pk = await self.database.execute(expr)
         return instance
 
-    async def delete(self, **kwargs) -> None:
+    async def delete(self) -> None:
         expr = self.table.delete()
         for filter_clause in self.filter_clauses:
             expr = expr.where(filter_clause)
