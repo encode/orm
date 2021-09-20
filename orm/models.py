@@ -403,9 +403,6 @@ class QuerySet:
         return instance
 
     async def delete(self, **kwargs) -> None:
-        if kwargs:
-            return await self.filter(**kwargs).delete()
-
         expr = self.table.delete()
         for filter_clause in self.filter_clauses:
             expr = expr.where(filter_clause)

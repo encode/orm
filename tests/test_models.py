@@ -265,14 +265,10 @@ async def test_model_get_or_create():
 
 async def test_queryset_delete():
     shirt = await Product.objects.create(name="Shirt", rating=5)
-    belt = await Product.objects.create(name="Belt", rating=5)
+    await Product.objects.create(name="Belt", rating=5)
     await Product.objects.create(name="Tie", rating=5)
-    await Product.objects.create(name="Trousers", rating=5)
 
-    await Product.objects.delete(pk=shirt.id)
-    assert await Product.objects.count() == 3
-
-    await Product.objects.filter(pk=belt.id).delete()
+    await Product.objects.filter(pk=shirt.id).delete()
     assert await Product.objects.count() == 2
 
     await Product.objects.delete()
