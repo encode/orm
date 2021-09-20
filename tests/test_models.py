@@ -254,11 +254,26 @@ async def test_model_search():
 
 
 async def test_model_get_or_create():
-    async with database:
-        user, created = await User.objects.get_or_create(name="Tom")
+    user, created = await User.objects.get_or_create(name="Tom")
 
-        assert created is True
-        assert await User.objects.get(pk=user.id) == user
+    assert created is True
+    assert await User.objects.get(pk=user.id) == user
 
-        user, created = await User.objects.get_or_create(name="Tom")
-        assert created is False
+    user, created = await User.objects.get_or_create(name="Tom")
+    assert created is False
+
+
+async def test_queryset_delete():
+    shirt = await Product.objects.create(name="Shirt", rating=5)
+    belt = await Product.objects.create(name="Belt", rating=5)
+    await Product.objects.create(name="Tie", rating=5)
+    await Product.objects.create(name="Trousers", rating=5)
+
+    await Product.objects.delete(pk=shirt.id)
+    assert await Product.objects.count() == 3
+
+    await Product.objects.filter(pk=belt.id).delete()
+    assert await Product.objects.count() == 2
+
+    await Product.objects.delete()
+    assert await Product.objects.count() == 0
