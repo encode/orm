@@ -24,7 +24,7 @@ class StatusEnum(Enum):
     RELEASED = "Released"
 
 
-class Example(orm.Model):
+class Product(orm.Model):
     registry = models
     fields = {
         "id": orm.Integer(primary_key=True),
@@ -38,6 +38,14 @@ class Example(orm.Model):
         "price": orm.Decimal(max_digits=5, decimal_places=2, allow_null=True),
         "status": orm.Enum(StatusEnum, default=StatusEnum.DRAFT),
         "value": orm.Float(allow_null=True),
+    }
+
+
+class User(orm.Model):
+    registry = models
+    fields = {
+        "id": orm.UUID(primary_key=True, default=uuid.uuid4),
+        "name": orm.String(allow_null=True, max_length=16),
     }
 
 
@@ -56,20 +64,20 @@ async def rollback_transactions():
 
 
 async def test_model_crud():
-    await Example.objects.create()
+    await Product.objects.create()
 
-    example = await Example.objects.get()
-    assert example.created.year == datetime.datetime.now().year
-    assert example.created_day == datetime.date.today()
-    assert example.data == {}
-    assert example.description == ""
-    assert example.huge_number == 0
-    assert example.price is None
-    assert example.status == StatusEnum.DRAFT
-    assert example.uuid is None
-    assert example.value is None
+    product = await Product.objects.get()
+    assert product.created.year == datetime.datetime.now().year
+    assert product.created_day == datetime.date.today()
+    assert product.data == {}
+    assert product.description == ""
+    assert product.huge_number == 0
+    assert product.price is None
+    assert product.status == StatusEnum.DRAFT
+    assert product.value is None
+    assert product.uuid is None
 
-    await example.update(
+    await product.update(
         data={"foo": 123},
         value=123.456,
         status=StatusEnum.RELEASED,
@@ -77,9 +85,13 @@ async def test_model_crud():
         uuid=uuid.UUID("01175cde-c18f-4a13-a492-21bd9e1cb01b"),
     )
 
-    example = await Example.objects.get()
-    assert example.value == 123.456
-    assert example.data == {"foo": 123}
-    assert example.status == StatusEnum.RELEASED
-    assert example.price == decimal.Decimal("999.99")
-    assert example.uuid == uuid.UUID("01175cde-c18f-4a13-a492-21bd9e1cb01b")
+    product = await Product.objects.get()
+    assert product.value == 123.456
+    assert product.data == {"foo": 123}
+    assert product.status == StatusEnum.RELEASED
+    assert product.price == decimal.Decimal("999.99")
+    assert product.uuid == uuid.UUID("01175cde-c18f-4a13-a492-21bd9e1cb01b")
+
+    await User.objects.create(name="Chris")
+    user = await User.objects.get(name="Chris")
+    assert user.name == "Chris"

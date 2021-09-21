@@ -166,3 +166,15 @@ async def test_multiple_fk():
     assert len(members) == 4
     for member in members:
         assert member.team.org.ident == "ACME Ltd"
+
+
+async def test_queryset_delete_with_fk():
+    malibu = await Album.objects.create(name="Malibu")
+    await Track.objects.create(album=malibu, title="The Bird", position=1)
+
+    wall = await Album.objects.create(name="The Wall")
+    await Track.objects.create(album=wall, title="The Wall", position=1)
+
+    await Track.objects.filter(album=malibu).delete()
+    assert await Track.objects.filter(album=malibu).count() == 0
+    assert await Track.objects.filter(album=wall).count() == 1
