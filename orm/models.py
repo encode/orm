@@ -407,7 +407,23 @@ class QuerySet:
         for filter_clause in self.filter_clauses:
             expr = expr.where(filter_clause)
 
-        return await self.database.execute(expr)
+        await self.database.execute(expr)
+
+    async def update(self, **kwargs) -> None:
+        fields = {
+            key: field.validator
+            for key, field in self.model_cls.fields.items()
+            if key in kwargs
+        }
+        validator = typesystem.Schema(fields=fields)
+        kwargs = validator.validate(kwargs)
+
+        expr = self.table.update().values(**kwargs)
+
+        for filter_clause in self.filter_clauses:
+            expr = expr.where(filter_clause)
+
+        await self.database.execute(expr)
 
     async def get_or_create(self, **kwargs) -> typing.Tuple[typing.Any, bool]:
         try:
@@ -459,19 +475,15 @@ class Model(metaclass=ModelMeta):
         return self.__class__.table
 
     async def update(self, **kwargs):
-        # Validate the keyword arguments.
         fields = {
             key: field.validator for key, field in self.fields.items() if key in kwargs
         }
         validator = typesystem.Schema(fields=fields)
         kwargs = validator.validate(kwargs)
 
-        # Build the update expression.
         pk_column = getattr(self.table.c, self.pkname)
-        expr = self.table.update()
-        expr = expr.values(**kwargs).where(pk_column == self.pk)
+        expr = self.table.update().values(**kwargs).where(pk_column == self.pk)
 
-        # Perform the update.
         await self.database.execute(expr)
 
         # Update the model instance.
