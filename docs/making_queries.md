@@ -19,16 +19,16 @@ class Note(orm.Model):
 ```
 
 ORM supports two types of queryset methods.
-Some queryset methods return another queryset and can be chianed together like `.filter()`:
+Some queryset methods return another queryset and can be chianed together like `.filter()` and `order_by`:
 
 ```python
-Note.objects.filter().filter()
+Note.objects.filter(completed=True).order_by("id")
 ```
 
 Other queryset methods return results and should be used as final method on the queryset like `.all()`:
 
 ```python
-Note.objects.filter().all()
+Note.objects.filter(completed=True).all()
 ```
 
 ## Returning Querysets
