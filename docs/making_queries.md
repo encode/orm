@@ -138,7 +138,7 @@ It's not very common, but to delete all rows in a table:
 await Note.objects.delete()
 ```
 
-You can also call delete on a queried instance:
+You can also call `.delete()` on a queried instance:
 
 ```python
 note = await Note.objects.first()
@@ -182,16 +182,23 @@ note = await Note.objects.get(id=1)
 
 ### .update()
 
-`.update()` method is defined on model instances.
-You need to query to get a `Note` instance first:
+You can update instances by calling `.update()` on a queryset:
+
+```python
+await Note.objects.filter(completed=True).update(completed=False)
+```
+
+It's not very common, but to update all rows in a table:
+
+```python
+await Note.objects.update(completed=False)
+```
+
+You can also call `.update()` on a queried instance:
 
 ```python
 note = await Note.objects.first()
-```
 
-Then update the field(s):
-
-```python
 await note.update(completed=True)
 ```
 

@@ -273,3 +273,17 @@ async def test_queryset_delete():
 
     await Product.objects.delete()
     assert await Product.objects.count() == 0
+
+
+async def test_queryset_update():
+    shirt = await Product.objects.create(name="Shirt", rating=5)
+    tie = await Product.objects.create(name="Tie", rating=5)
+
+    await Product.objects.filter(pk=shirt.id).update(rating=3)
+    shirt = await Product.objects.get(pk=shirt.id)
+    assert shirt.rating == 3
+    assert await Product.objects.get(pk=tie.id) == tie
+
+    await Product.objects.update(rating=3)
+    tie = await Product.objects.get(pk=tie.id)
+    assert tie.rating == 3

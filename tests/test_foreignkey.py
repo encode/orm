@@ -178,3 +178,13 @@ async def test_queryset_delete_with_fk():
     await Track.objects.filter(album=malibu).delete()
     assert await Track.objects.filter(album=malibu).count() == 0
     assert await Track.objects.filter(album=wall).count() == 1
+
+
+async def test_queryset_update_with_fk():
+    malibu = await Album.objects.create(name="Malibu")
+    wall = await Album.objects.create(name="The Wall")
+    await Track.objects.create(album=malibu, title="The Bird", position=1)
+
+    await Track.objects.filter(album=malibu).update(album=wall)
+    assert await Track.objects.filter(album=malibu).count() == 0
+    assert await Track.objects.filter(album=wall).count() == 1
