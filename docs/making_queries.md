@@ -210,8 +210,32 @@ To get an existing instance matching the query, or create a new one.
 This will retuurn a tuple of `instance` and `created`.
 
 ```python
-note, created = await Note.objects.get_or_create(text="Going to car wash")
+note, created = await Note.objects.get_or_create(
+    text="Going to car wash", defaults={"completed": False}
+)
 ```
+
+This will query a `Note` with `text` as `"Going to car wash"`,
+if it doesn't exist, it will use `defaults` argument to create the new instance.
 
 !!! note
     Since `get_or_create()` is doing a [get()](#get), it can raise `MultipleMatches` exception.
+
+
+### .update_or_create()
+
+To update an existing instance matching the query, or create a new one.
+This will retuurn a tuple of `instance` and `created`.
+
+```python
+note, created = await Note.objects.update_or_create(
+    text="Going to car wash", defaults={"completed": True}
+)
+```
+
+This will query a `Note` with `text` as `"Going to car wash"`,
+if an instance is found, it will use the `defaults` argument to update the instance.
+If it matches no records, it will use the comibnation of arguments to create the new instance.
+
+!!! note
+    Since `update_or_create()` is doing a [get()](#get), it can raise `MultipleMatches` exception.
