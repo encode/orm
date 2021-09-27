@@ -175,6 +175,25 @@ class ForeignKey(ModelField):
         return target(pk=value)
 
 
+class OneToOne(ForeignKey):
+    def get_column(self, name: str) -> sqlalchemy.Column:
+        target = self.target
+        to_field = target.fields[target.pkname]
+
+        column_type = to_field.get_column_type()
+        constraints = [
+            sqlalchemy.schema.ForeignKey(f"{target.tablename}.{target.pkname}"),
+        ]
+
+        return sqlalchemy.Column(
+            name,
+            column_type,
+            *constraints,
+            nullable=self.allow_null,
+            unique=True,
+        )
+
+
 class Enum(ModelField):
     def __init__(self, enum, **kwargs):
         super().__init__(**kwargs)

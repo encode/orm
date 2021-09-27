@@ -1,4 +1,6 @@
+import asyncpg
 import databases
+import pymysql
 import pytest
 
 import orm
@@ -51,6 +53,23 @@ class Member(orm.Model):
         "id": orm.Integer(primary_key=True),
         "team": orm.ForeignKey(Team),
         "email": orm.String(max_length=100),
+    }
+
+
+class Profile(orm.Model):
+    registry = models
+    fields = {
+        "id": orm.Integer(primary_key=True),
+        "website": orm.String(max_length=100),
+    }
+
+
+class Person(orm.Model):
+    registry = models
+    fields = {
+        "id": orm.Integer(primary_key=True),
+        "email": orm.String(max_length=100),
+        "profile": orm.OneToOne(Profile),
     }
 
 
@@ -188,3 +207,23 @@ async def test_queryset_update_with_fk():
     await Track.objects.filter(album=malibu).update(album=wall)
     assert await Track.objects.filter(album=malibu).count() == 0
     assert await Track.objects.filter(album=wall).count() == 1
+
+
+async def test_one_to_one_crud():
+    profile = await Profile.objects.create(website="https://encode.io")
+    await Person.objects.create(email="info@encode.io", profile=profile)
+
+    person = await Person.objects.get(email="info@encode.io")
+    assert person.profile.pk == profile.pk
+    assert not hasattr(person.profile, "website")
+
+    await person.profile.load()
+    assert person.profile.website == "https://encode.io"
+
+    exceptions = (
+        asyncpg.exceptions.UniqueViolationError,
+        pymysql.err.IntegrityError,
+    )
+
+    with pytest.raises(exceptions):
+        await Person.objects.create(email="contact@encode.io", profile=profile)
