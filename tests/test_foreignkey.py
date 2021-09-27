@@ -1,3 +1,5 @@
+import sqlite3
+
 import asyncpg
 import databases
 import pymysql
@@ -223,6 +225,7 @@ async def test_one_to_one_crud():
     exceptions = (
         asyncpg.exceptions.UniqueViolationError,
         pymysql.err.IntegrityError,
+        sqlite3.IntegrityError,
     )
 
     with pytest.raises(exceptions):
