@@ -254,13 +254,19 @@ async def test_model_search():
 
 
 async def test_model_get_or_create():
-    user, created = await User.objects.get_or_create(name="Tom")
-
+    user, created = await User.objects.get_or_create(
+        name="Tom", defaults={"language": "Spanish"}
+    )
     assert created is True
-    assert await User.objects.get(pk=user.id) == user
+    assert user.name == "Tom"
+    assert user.language == "Spanish"
 
-    user, created = await User.objects.get_or_create(name="Tom")
+    user, created = await User.objects.get_or_create(
+        name="Tom", defaults={"language": "English"}
+    )
     assert created is False
+    assert user.name == "Tom"
+    assert user.language == "Spanish"
 
 
 async def test_queryset_delete():
@@ -287,3 +293,19 @@ async def test_queryset_update():
     await Product.objects.update(rating=3)
     tie = await Product.objects.get(pk=tie.id)
     assert tie.rating == 3
+
+
+async def test_model_update_or_create():
+    user, created = await User.objects.update_or_create(
+        name="Tom", language="English", defaults={"name": "Jane"}
+    )
+    assert created is True
+    assert user.name == "Jane"
+    assert user.language == "English"
+
+    user, created = await User.objects.update_or_create(
+        name="Jane", language="English", defaults={"name": "Tom"}
+    )
+    assert created is False
+    assert user.name == "Tom"
+    assert user.language == "English"

@@ -425,11 +425,26 @@ class QuerySet:
 
         await self.database.execute(expr)
 
-    async def get_or_create(self, **kwargs) -> typing.Tuple[typing.Any, bool]:
+    async def get_or_create(
+        self, defaults: typing.Dict[str, typing.Any], **kwargs
+    ) -> typing.Tuple[typing.Any, bool]:
         try:
             instance = await self.get(**kwargs)
             return instance, False
         except NoMatch:
+            kwargs.update(defaults)
+            instance = await self.create(**kwargs)
+            return instance, True
+
+    async def update_or_create(
+        self, defaults: typing.Dict[str, typing.Any], **kwargs
+    ) -> typing.Tuple[typing.Any, bool]:
+        try:
+            instance = await self.get(**kwargs)
+            await instance.update(**defaults)
+            return instance, False
+        except NoMatch:
+            kwargs.update(defaults)
             instance = await self.create(**kwargs)
             return instance, True
 
