@@ -194,21 +194,21 @@ async def test_queryset_update_with_fk():
 
 @pytest.mark.skipif(database.url.dialect == "sqlite", reason="Not supported on SQLite")
 async def test_on_delete_cascade():
-    wall = await Album.objects.create(name="The Wall")
-    await Track.objects.create(album=wall, title="Hey You", position=1)
-    await Track.objects.create(album=wall, title="Breathe", position=2)
+    album = await Album.objects.create(name="The Wall")
+    await Track.objects.create(album=album, title="Hey You", position=1)
+    await Track.objects.create(album=album, title="Breathe", position=2)
 
     assert await Track.objects.count() == 2
 
-    await wall.delete()
+    await album.delete()
 
     assert await Track.objects.count() == 0
 
 
 @pytest.mark.skipif(database.url.dialect == "sqlite", reason="Not supported on SQLite")
 async def test_on_delete_retstrict():
-    encode = await Organisation.objects.create(ident="Encode")
-    await Team.objects.create(org=encode, name="Maintainers")
+    organisation = await Organisation.objects.create(ident="Encode")
+    await Team.objects.create(org=organisation, name="Maintainers")
 
     exceptions = (
         asyncpg.exceptions.ForeignKeyViolationError,
@@ -216,13 +216,13 @@ async def test_on_delete_retstrict():
     )
 
     with pytest.raises(exceptions):
-        await encode.delete()
+        await organisation.delete()
 
 
 @pytest.mark.skipif(database.url.dialect == "sqlite", reason="Not supported on SQLite")
 async def test_on_delete_set_null():
-    encode = await Organisation.objects.create(ident="Encode")
-    team = await Team.objects.create(org=encode, name="Maintainers")
+    organisation = await Organisation.objects.create(ident="Encode")
+    team = await Team.objects.create(org=organisation, name="Maintainers")
     await Member.objects.create(email="member@encode.io", team=team)
 
     await team.delete()
