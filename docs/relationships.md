@@ -1,5 +1,7 @@
 ## ForeignKey
 
+### Defining and querying relationships
+
 ORM supports loading and filtering across foreign keys.
 
 Let's say you have the following models defined:
@@ -79,3 +81,50 @@ assert len(tracks) == 2
 tracks = Track.objects.filter(album__name__iexact="fantasies")
 assert len(tracks) == 2
 ```
+
+### ForeignKey constraints
+
+`ForeigknKey` supports specfiying a constraint through `on_delete` argument.
+
+This will result in a SQL `ON DELETE` query being generated when the referenced object is removed.
+
+With the following definition:
+
+```python
+class Album(orm.Model):
+    tablename = "albums"
+    registry = models
+    fields = {
+        "id": orm.Integer(primary_key=True),
+        "name": orm.String(max_length=100),
+    }
+
+
+class Track(orm.Model):
+    tablename = "tracks"
+    registry = models
+    fields = {
+        "id": orm.Integer(primary_key=True),
+        "album": orm.ForeignKey(Album, on_delete=orm.CASCADE),
+        "title": orm.String(max_length=100),
+    }
+```
+
+`Track` model defines `orm.ForeignKey(Album, on_delete=orm.CASCADE)` so whenever an `Album` object is removed,
+all `Track` objects referencing that `Album`  will also be removed.
+
+Available options for `on_delete` are:
+
+* `CASCADE`
+
+This will remove all referencing objects.
+
+* `RESTRICT`
+
+This will restrict removing referenced object, if there are objects referencing it.
+A database driver exception will be raised.
+
+* `SET NULL`
+
+This will set referencing objects `ForeignKey` column to `NULL`.
+The `ForeignKey` defined here should also have `allow_null=True`.

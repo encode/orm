@@ -137,9 +137,12 @@ class ForeignKey(ModelField):
         def validate(self, value):
             return value.pk
 
-    def __init__(self, to, allow_null: bool = False):
+    def __init__(
+        self, to, allow_null: bool = False, on_delete: typing.Optional[str] = None
+    ):
         super().__init__(allow_null=allow_null)
         self.to = to
+        self.on_delete = on_delete
 
     @property
     def target(self):
@@ -159,7 +162,10 @@ class ForeignKey(ModelField):
 
         column_type = to_field.get_column_type()
         constraints = [
-            sqlalchemy.schema.ForeignKey(f"{target.tablename}.{target.pkname}")
+            sqlalchemy.schema.ForeignKey(
+                f"{target.tablename}.{target.pkname}",
+                ondelete=self.on_delete,
+            )
         ]
         return sqlalchemy.Column(
             name,
