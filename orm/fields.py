@@ -163,8 +163,7 @@ class ForeignKey(ModelField):
         column_type = to_field.get_column_type()
         constraints = [
             sqlalchemy.schema.ForeignKey(
-                f"{target.tablename}.{target.pkname}",
-                ondelete=self.on_delete,
+                f"{target.tablename}.{target.pkname}", ondelete=self.on_delete
             )
         ]
         return sqlalchemy.Column(
@@ -188,7 +187,9 @@ class OneToOne(ForeignKey):
 
         column_type = to_field.get_column_type()
         constraints = [
-            sqlalchemy.schema.ForeignKey(f"{target.tablename}.{target.pkname}"),
+            sqlalchemy.schema.ForeignKey(
+                f"{target.tablename}.{target.pkname}", ondelete=self.on_delete
+            ),
         ]
 
         return sqlalchemy.Column(
