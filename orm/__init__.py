@@ -1,3 +1,4 @@
+from orm.constants import CASCADE, RESTRICT, SET_NULL
 from orm.exceptions import MultipleMatches, NoMatch
 from orm.fields import (
     JSON,
@@ -19,6 +20,9 @@ from orm.models import Model, ModelRegistry
 
 __version__ = "0.2.1"
 __all__ = [
+    "CASCADE",
+    "RESTRICT",
+    "SET_NULL",
     "NoMatch",
     "MultipleMatches",
     "BigInteger",

@@ -1,4 +1,6 @@
+import asyncpg
 import databases
+import pymysql
 import pytest
 
 import orm
@@ -22,7 +24,7 @@ class Track(orm.Model):
     registry = models
     fields = {
         "id": orm.Integer(primary_key=True),
-        "album": orm.ForeignKey("Album"),
+        "album": orm.ForeignKey("Album", on_delete=orm.CASCADE),
         "title": orm.String(max_length=100),
         "position": orm.Integer(),
     }
@@ -40,7 +42,7 @@ class Team(orm.Model):
     registry = models
     fields = {
         "id": orm.Integer(primary_key=True),
-        "org": orm.ForeignKey(Organisation),
+        "org": orm.ForeignKey(Organisation, on_delete=orm.RESTRICT),
         "name": orm.String(max_length=100),
     }
 
@@ -49,7 +51,7 @@ class Member(orm.Model):
     registry = models
     fields = {
         "id": orm.Integer(primary_key=True),
-        "team": orm.ForeignKey(Team),
+        "team": orm.ForeignKey(Team, on_delete=orm.SET_NULL, allow_null=True),
         "email": orm.String(max_length=100),
     }
 
@@ -188,3 +190,42 @@ async def test_queryset_update_with_fk():
     await Track.objects.filter(album=malibu).update(album=wall)
     assert await Track.objects.filter(album=malibu).count() == 0
     assert await Track.objects.filter(album=wall).count() == 1
+
+
+@pytest.mark.skipif(database.url.dialect == "sqlite", reason="Not supported on SQLite")
+async def test_on_delete_cascade():
+    album = await Album.objects.create(name="The Wall")
+    await Track.objects.create(album=album, title="Hey You", position=1)
+    await Track.objects.create(album=album, title="Breathe", position=2)
+
+    assert await Track.objects.count() == 2
+
+    await album.delete()
+
+    assert await Track.objects.count() == 0
+
+
+@pytest.mark.skipif(database.url.dialect == "sqlite", reason="Not supported on SQLite")
+async def test_on_delete_retstrict():
+    organisation = await Organisation.objects.create(ident="Encode")
+    await Team.objects.create(org=organisation, name="Maintainers")
+
+    exceptions = (
+        asyncpg.exceptions.ForeignKeyViolationError,
+        pymysql.err.IntegrityError,
+    )
+
+    with pytest.raises(exceptions):
+        await organisation.delete()
+
+
+@pytest.mark.skipif(database.url.dialect == "sqlite", reason="Not supported on SQLite")
+async def test_on_delete_set_null():
+    organisation = await Organisation.objects.create(ident="Encode")
+    team = await Team.objects.create(org=organisation, name="Maintainers")
+    await Member.objects.create(email="member@encode.io", team=team)
+
+    await team.delete()
+
+    member = await Member.objects.first()
+    assert member.team.pk is None
