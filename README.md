@@ -26,6 +26,10 @@ database migrations.
 
 ---
 
+**Documentation**: [https://www.encode.io/orm](https://www.encode.io/orm)
+
+---
+
 ## Installation
 
 ```shell
@@ -74,6 +78,9 @@ note = await Note.objects.get(id=1)
 print(note)
 # Note(id=1, text="Buy the groceries.", completed=False)
 ```
+
+<p align="center">&mdash; 🗃 &mdash;</p>
+<p align="center"><i>ORM is <a href="https://github.com/encode/orm/blob/master/LICENSE.md">BSD licensed</a> code. Designed & built in Brighton, England.</i></p>
 
 [sqlalchemy-core]: https://docs.sqlalchemy.org/en/latest/core/
 [asyncpg]: https://github.com/MagicStack/asyncpg
