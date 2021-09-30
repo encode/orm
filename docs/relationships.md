@@ -128,3 +128,44 @@ A database driver exception will be raised.
 
 This will set referencing objects `ForeignKey` column to `NULL`.
 The `ForeignKey` defined here should also have `allow_null=True`.
+
+
+## OneToOne
+
+Creating a  `OneToOne` relationship between models, this is basically
+the same as `ForeignKey` but it uses `unique=True` on the ForeignKey column:
+
+```python
+class Profile(orm.Model):
+    registry = models
+    fields = {
+        "id": orm.Integer(primary_key=True),
+        "website": orm.String(max_length=100),
+    }
+
+
+class Person(orm.Model):
+    registry = models
+    fields = {
+        "id": orm.Integer(primary_key=True),
+        "email": orm.String(max_length=100),
+        "profile": orm.OneToOne(Profile),
+    }
+```
+
+You can create a `Profile` and `Person` instance:
+
+```python
+profile = await Profile.objects.create(website="https://encode.io")
+await Person.objects.create(email="info@encode.io", profile=profile)
+```
+
+Now creating another `Person` using the same `profile` will fail
+and will raise an exception:
+
+```python
+await Person.objects.create(email="info@encode.io", profile=profile)
+```
+
+`OneToOne` accepts the same `on_delete` parameters as `ForeignKey` which is
+described [here](#foreignkey-constraints).

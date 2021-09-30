@@ -1,3 +1,5 @@
+import sqlite3
+
 import asyncpg
 import databases
 import pymysql
@@ -53,6 +55,23 @@ class Member(orm.Model):
         "id": orm.Integer(primary_key=True),
         "team": orm.ForeignKey(Team, on_delete=orm.SET_NULL, allow_null=True),
         "email": orm.String(max_length=100),
+    }
+
+
+class Profile(orm.Model):
+    registry = models
+    fields = {
+        "id": orm.Integer(primary_key=True),
+        "website": orm.String(max_length=100),
+    }
+
+
+class Person(orm.Model):
+    registry = models
+    fields = {
+        "id": orm.Integer(primary_key=True),
+        "email": orm.String(max_length=100),
+        "profile": orm.OneToOne(Profile),
     }
 
 
@@ -229,3 +248,24 @@ async def test_on_delete_set_null():
 
     member = await Member.objects.first()
     assert member.team.pk is None
+
+
+async def test_one_to_one_crud():
+    profile = await Profile.objects.create(website="https://encode.io")
+    await Person.objects.create(email="info@encode.io", profile=profile)
+
+    person = await Person.objects.get(email="info@encode.io")
+    assert person.profile.pk == profile.pk
+    assert not hasattr(person.profile, "website")
+
+    await person.profile.load()
+    assert person.profile.website == "https://encode.io"
+
+    exceptions = (
+        asyncpg.exceptions.UniqueViolationError,
+        pymysql.err.IntegrityError,
+        sqlite3.IntegrityError,
+    )
+
+    with pytest.raises(exceptions):
+        await Person.objects.create(email="contact@encode.io", profile=profile)

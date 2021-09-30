@@ -163,8 +163,7 @@ class ForeignKey(ModelField):
         column_type = to_field.get_column_type()
         constraints = [
             sqlalchemy.schema.ForeignKey(
-                f"{target.tablename}.{target.pkname}",
-                ondelete=self.on_delete,
+                f"{target.tablename}.{target.pkname}", ondelete=self.on_delete
             )
         ]
         return sqlalchemy.Column(
@@ -179,6 +178,27 @@ class ForeignKey(ModelField):
         if isinstance(value, target):
             return value
         return target(pk=value)
+
+
+class OneToOne(ForeignKey):
+    def get_column(self, name: str) -> sqlalchemy.Column:
+        target = self.target
+        to_field = target.fields[target.pkname]
+
+        column_type = to_field.get_column_type()
+        constraints = [
+            sqlalchemy.schema.ForeignKey(
+                f"{target.tablename}.{target.pkname}", ondelete=self.on_delete
+            ),
+        ]
+
+        return sqlalchemy.Column(
+            name,
+            column_type,
+            *constraints,
+            nullable=self.allow_null,
+            unique=True,
+        )
 
 
 class Enum(ModelField):
