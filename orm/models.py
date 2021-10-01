@@ -392,7 +392,7 @@ class QuerySet:
             if value.validator.read_only and value.validator.has_default():
                 kwargs[key] = value.validator.get_default_value()
 
-        if self.model_cls.database.url.dialect == "sqlite":
+        if self.model_cls.database.url.dialect in ["mysql", "sqlite"]:
             expr = self.table.insert().values(**kwargs)
         else:
             pk_column = getattr(self.table.c, self.pkname)

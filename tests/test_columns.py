@@ -93,8 +93,10 @@ async def test_model_crud():
     assert product.uuid == uuid.UUID("01175cde-c18f-4a13-a492-21bd9e1cb01b")
 
 
-@pytest.mark.skipif(database.url.dialect == "sqlite", reason="Not supported on SQLite")
 async def test_model_crud_with_non_integer_pk():
+    if database.url.dialect in ["mysql", "sqlite"]:
+        pytest.skip("RETURNING clause not supported.")
+
     user = await User.objects.create(name="Chris")
 
     assert isinstance(user.pk, uuid.UUID)
