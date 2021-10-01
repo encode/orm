@@ -382,7 +382,6 @@ class QuerySet:
             return rows[0]
 
     async def create(self, **kwargs):
-        # Validate the keyword arguments.
         fields = self.model_cls.fields
         validator = typesystem.Schema(
             fields={key: value.validator for key, value in fields.items()}
@@ -393,11 +392,12 @@ class QuerySet:
             if value.validator.read_only and value.validator.has_default():
                 kwargs[key] = value.validator.get_default_value()
 
-        # Build the insert expression.
-        expr = self.table.insert()
-        expr = expr.values(**kwargs)
+        if self.model_cls.database.url.dialect == "sqlite":
+            expr = self.table.insert().values(**kwargs)
+        else:
+            pk_column = getattr(self.table.c, self.pkname)
+            expr = self.table.insert().values(**kwargs).returning(pk_column)
 
-        # Execute the insert, and return a new model instance.
         instance = self.model_cls(**kwargs)
         instance.pk = await self.database.execute(expr)
         return instance
