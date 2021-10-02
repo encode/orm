@@ -392,14 +392,14 @@ class QuerySet:
             if value.validator.read_only and value.validator.has_default():
                 kwargs[key] = value.validator.get_default_value()
 
-        if self.model_cls.database.url.dialect in ["mysql", "sqlite"]:
-            expr = self.table.insert().values(**kwargs)
-        else:
-            pk_column = getattr(self.table.c, self.pkname)
-            expr = self.table.insert().values(**kwargs).returning(pk_column)
-
         instance = self.model_cls(**kwargs)
-        instance.pk = await self.database.execute(expr)
+        expr = self.table.insert().values(**kwargs)
+
+        if self.pkname not in kwargs:
+            instance.pk = await self.database.execute(expr)
+        else:
+            await self.database.execute(expr)
+
         return instance
 
     async def delete(self) -> None:
