@@ -382,7 +382,6 @@ class QuerySet:
             return rows[0]
 
     async def create(self, **kwargs):
-        # Validate the keyword arguments.
         fields = self.model_cls.fields
         validator = typesystem.Schema(
             fields={key: value.validator for key, value in fields.items()}
@@ -393,13 +392,14 @@ class QuerySet:
             if value.validator.read_only and value.validator.has_default():
                 kwargs[key] = value.validator.get_default_value()
 
-        # Build the insert expression.
-        expr = self.table.insert()
-        expr = expr.values(**kwargs)
-
-        # Execute the insert, and return a new model instance.
         instance = self.model_cls(**kwargs)
-        instance.pk = await self.database.execute(expr)
+        expr = self.table.insert().values(**kwargs)
+
+        if self.pkname not in kwargs:
+            instance.pk = await self.database.execute(expr)
+        else:
+            await self.database.execute(expr)
+
         return instance
 
     async def delete(self) -> None:

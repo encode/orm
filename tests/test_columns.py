@@ -64,9 +64,9 @@ async def rollback_transactions():
 
 
 async def test_model_crud():
-    await Product.objects.create()
+    product = await Product.objects.create()
 
-    product = await Product.objects.get()
+    product = await Product.objects.get(pk=product.pk)
     assert product.created.year == datetime.datetime.now().year
     assert product.created_day == datetime.date.today()
     assert product.data == {}
@@ -92,6 +92,6 @@ async def test_model_crud():
     assert product.price == decimal.Decimal("999.99")
     assert product.uuid == uuid.UUID("01175cde-c18f-4a13-a492-21bd9e1cb01b")
 
-    await User.objects.create(name="Chris")
-    user = await User.objects.get(name="Chris")
-    assert user.name == "Chris"
+    user = await User.objects.create(name="Chris")
+    assert isinstance(user.pk, uuid.UUID)
+    assert await User.objects.get(pk=user.pk) == user
