@@ -234,3 +234,11 @@ class UUID(ModelField):
 
     def get_column_type(self):
         return GUID()
+
+
+class Email(String):
+    def get_validator(self, **kwargs) -> typesystem.Field:
+        return typesystem.Email(**kwargs)
+
+    def get_column_type(self):
+        return sqlalchemy.String(length=self.validator.max_length)

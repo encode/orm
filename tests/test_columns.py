@@ -46,6 +46,7 @@ class User(orm.Model):
     fields = {
         "id": orm.UUID(primary_key=True, default=uuid.uuid4),
         "name": orm.String(allow_null=True, max_length=16),
+        "email": orm.Email(allow_null=True, max_length=256),
     }
 
 
@@ -92,6 +93,6 @@ async def test_model_crud():
     assert product.price == decimal.Decimal("999.99")
     assert product.uuid == uuid.UUID("01175cde-c18f-4a13-a492-21bd9e1cb01b")
 
-    user = await User.objects.create(name="Chris")
+    user = await User.objects.create(name="Chris", email="chirs@encode.io")
     assert isinstance(user.pk, uuid.UUID)
     assert await User.objects.get(pk=user.pk) == user
