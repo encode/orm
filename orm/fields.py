@@ -3,7 +3,7 @@ import typing
 import sqlalchemy
 import typesystem
 
-from orm.sqlalchemy_fields import GUID
+from orm.sqlalchemy_fields import GUID, GenericIP
 
 
 class ModelField:
@@ -242,3 +242,11 @@ class Email(String):
 
     def get_column_type(self):
         return sqlalchemy.String(length=self.validator.max_length)
+
+
+class IPAddress(ModelField):
+    def get_validator(self, **kwargs) -> typesystem.Field:
+        return typesystem.IPAddress(**kwargs)
+
+    def get_column_type(self):
+        return GenericIP()

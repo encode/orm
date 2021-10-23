@@ -1,5 +1,6 @@
 import datetime
 import decimal
+import ipaddress
 import uuid
 from enum import Enum
 
@@ -47,6 +48,7 @@ class User(orm.Model):
         "id": orm.UUID(primary_key=True, default=uuid.uuid4),
         "name": orm.String(allow_null=True, max_length=16),
         "email": orm.Email(allow_null=True, max_length=256),
+        "ipaddress": orm.IPAddress(allow_null=True),
     }
 
 
@@ -93,6 +95,11 @@ async def test_model_crud():
     assert product.price == decimal.Decimal("999.99")
     assert product.uuid == uuid.UUID("01175cde-c18f-4a13-a492-21bd9e1cb01b")
 
-    user = await User.objects.create(name="Chris", email="chirs@encode.io")
+    user = await User.objects.create(
+        name="Chris",
+        email="chirs@encode.io",
+        ipaddress="192.168.1.1",
+    )
     assert isinstance(user.pk, uuid.UUID)
+    assert isinstance(user.ipaddress, (ipaddress.IPv4Address, ipaddress.IPv6Address))
     assert await User.objects.get(pk=user.pk) == user
