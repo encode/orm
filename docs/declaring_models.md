@@ -60,6 +60,7 @@ See `TypeSystem` for [type-specific validation keyword arguments][typesystem-fie
 * `orm.Date()`
 * `orm.DateTime()`
 * `orm.Decimal()`
+* `orm.Email(max_length)`
 * `orm.Enum()`
 * `orm.Float()`
 * `orm.Integer()`
