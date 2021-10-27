@@ -35,7 +35,6 @@ __all__ = [
     "Decimal",
     "Email",
     "Enum",
-    "Email",
     "Float",
     "ForeignKey",
     "Integer",
