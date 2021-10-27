@@ -33,6 +33,7 @@ __all__ = [
     "Date",
     "DateTime",
     "Decimal",
+    "Email",
     "Enum",
     "Email",
     "Float",
