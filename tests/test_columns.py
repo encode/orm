@@ -95,11 +95,14 @@ async def test_model_crud():
     assert product.price == decimal.Decimal("999.99")
     assert product.uuid == uuid.UUID("01175cde-c18f-4a13-a492-21bd9e1cb01b")
 
-    user = await User.objects.create(
-        name="Chris",
-        email="chirs@encode.io",
-        ipaddress="192.168.1.1",
-    )
+    user = await User.objects.create()
     assert isinstance(user.pk, uuid.UUID)
+
+    user = await User.objects.get()
+    assert user.email is None
+    assert user.ipaddress is None
+
+    await user.update(ipaddress="192.168.1.1", name="Chris", email="chirs@encode.io")
+
+    user = await User.objects.get()
     assert isinstance(user.ipaddress, (ipaddress.IPv4Address, ipaddress.IPv6Address))
-    assert await User.objects.get(pk=user.pk) == user
