@@ -468,12 +468,6 @@ class Model(metaclass=ModelMeta):
                 )
             setattr(self, key, value)
 
-    def __repr__(self):
-        return f"<{self.__class__.__name__}: {self}>"
-
-    def __str__(self):
-        return f"{self.__class__.__name__}(id={self.pk})"
-
     @property
     def pk(self):
         return getattr(self, self.pkname)
@@ -481,6 +475,12 @@ class Model(metaclass=ModelMeta):
     @pk.setter
     def pk(self, value):
         setattr(self, self.pkname, value)
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__}: {self}>"
+
+    def __str__(self):
+        return f"{self.__class__.__name__}(id={self.pk})"
 
     @classmethod
     def build_table(cls):
