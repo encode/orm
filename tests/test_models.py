@@ -309,3 +309,17 @@ async def test_model_update_or_create():
     assert created is False
     assert user.name == "Tom"
     assert user.language == "English"
+
+
+async def test_model_sqlalchemy_filter_operators():
+    user = await User.objects.create(name="George")
+
+    assert user == await User.objects.filter(User.columns.name == "George").get()
+    assert user == await User.objects.filter(User.columns.name.startswith("G")).get()
+    assert user == await User.objects.filter(User.columns.name.is_not(None)).get()
+
+    product = await Product.objects.create(name="100%-Cotton", rating=3)
+    assert (
+        product
+        == await Product.objects.filter(Product.columns.name.contains("cotton")).get()
+    )
