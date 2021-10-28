@@ -468,6 +468,12 @@ class Model(metaclass=ModelMeta):
                 )
             setattr(self, key, value)
 
+    def __repr__(self):
+        return "<%s: %s>" % (self.__class__.__name__, self)
+
+    def __str__(self):
+        return "%s(id=%s)" % (self.__class__.__name__, self.pk)
+
     @property
     def pk(self):
         return getattr(self, self.pkname)

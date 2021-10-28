@@ -60,6 +60,9 @@ def test_model_class():
     assert User(id=1) != User(id=2)
     assert User(id=1) == User(id=1)
 
+    assert str(User(id=1)) == "User(id=1)"
+    assert repr(User(id=1)) == "<User: User(id=1)>"
+
     assert isinstance(User.objects.schema.fields["id"], typesystem.Integer)
     assert isinstance(User.objects.schema.fields["name"], typesystem.String)
 
