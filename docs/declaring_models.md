@@ -68,6 +68,7 @@ See `TypeSystem` for [type-specific validation keyword arguments][typesystem-fie
 * `orm.String(max_length)`
 * `orm.Text()`
 * `orm.Time()`
+* `orm.URL(max_length)`
 * `orm.UUID()`
 * `orm.JSON()`
 

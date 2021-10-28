@@ -49,6 +49,7 @@ class User(orm.Model):
         "name": orm.String(allow_null=True, max_length=16),
         "email": orm.Email(allow_null=True, max_length=256),
         "ipaddress": orm.IPAddress(allow_null=True),
+        "url": orm.URL(allow_null=True, max_length=2048),
     }
 
 
@@ -101,8 +102,15 @@ async def test_model_crud():
     user = await User.objects.get()
     assert user.email is None
     assert user.ipaddress is None
+    assert user.url is None
 
-    await user.update(ipaddress="192.168.1.1", name="Chris", email="chirs@encode.io")
+    await user.update(
+        ipaddress="192.168.1.1",
+        name="Chris",
+        email="chirs@encode.io",
+        url="https://encode.io",
+    )
 
     user = await User.objects.get()
     assert isinstance(user.ipaddress, (ipaddress.IPv4Address, ipaddress.IPv6Address))
+    assert user.url == "https://encode.io"
