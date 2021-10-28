@@ -480,7 +480,7 @@ class Model(metaclass=ModelMeta):
         return f"<{self.__class__.__name__}: {self}>"
 
     def __str__(self):
-        return f"{self.__class__.__name__}(id={self.pk})"
+        return f"{self.__class__.__name__}({self.pkname}={self.pk})"
 
     @classmethod
     def build_table(cls):
