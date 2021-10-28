@@ -64,6 +64,7 @@ See `TypeSystem` for [type-specific validation keyword arguments][typesystem-fie
 * `orm.Enum()`
 * `orm.Float()`
 * `orm.Integer()`
+* `orm.IPAddress()`
 * `orm.String(max_length)`
 * `orm.Text()`
 * `orm.Time()`
