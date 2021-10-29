@@ -476,6 +476,12 @@ class Model(metaclass=ModelMeta):
     def pk(self, value):
         setattr(self, self.pkname, value)
 
+    def __repr__(self):
+        return f"<{self.__class__.__name__}: {self}>"
+
+    def __str__(self):
+        return f"{self.__class__.__name__}({self.pkname}={self.pk})"
+
     @classmethod
     def build_table(cls):
         tablename = cls.tablename
