@@ -72,7 +72,7 @@ await Note.objects.create(text="Buy the groceries.", completed=False)
 
 note = await Note.objects.get(id=1)
 print(note)
-# Note(id=1, text="Buy the groceries.", completed=False)
+# Note(id=1)
 ```
 
 [sqlalchemy-core]: https://docs.sqlalchemy.org/en/latest/core/
