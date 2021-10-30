@@ -250,3 +250,11 @@ class IPAddress(ModelField):
 
     def get_column_type(self):
         return GenericIP()
+
+
+class URL(String):
+    def get_validator(self, **kwargs) -> typesystem.Field:
+        return typesystem.URL(**kwargs)
+
+    def get_column_type(self):
+        return sqlalchemy.String(length=self.validator.max_length)

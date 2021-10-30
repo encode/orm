@@ -2,6 +2,7 @@ from orm.constants import CASCADE, RESTRICT, SET_NULL
 from orm.exceptions import MultipleMatches, NoMatch
 from orm.fields import (
     JSON,
+    URL,
     UUID,
     BigInteger,
     Boolean,
@@ -44,6 +45,7 @@ __all__ = [
     "String",
     "Text",
     "Time",
+    "URL",
     "UUID",
     "Model",
     "ModelRegistry",
