@@ -22,7 +22,7 @@ from orm.fields import (
 )
 from orm.models import Model, ModelRegistry
 
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 __all__ = [
     "CASCADE",
     "RESTRICT",
