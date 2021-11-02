@@ -321,5 +321,5 @@ async def test_model_sqlalchemy_filter_operators():
     product = await Product.objects.create(name="100%-Cotton", rating=3)
     assert (
         product
-        == await Product.objects.filter(Product.columns.name.contains("cotton")).get()
+        == await Product.objects.filter(Product.columns.name.contains("Cotton")).get()
     )
