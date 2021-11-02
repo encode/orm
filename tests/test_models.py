@@ -317,6 +317,7 @@ async def test_model_sqlalchemy_filter_operators():
     assert user == await User.objects.filter(User.columns.name == "George").get()
     assert user == await User.objects.filter(User.columns.name.startswith("G")).get()
     assert user == await User.objects.filter(User.columns.name.is_not(None)).get()
+    assert user == await User.objects.exclude(User.columns.name != "Jack").get()
 
     product = await Product.objects.create(name="100%-Cotton", rating=3)
     assert (
