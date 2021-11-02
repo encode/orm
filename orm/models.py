@@ -182,9 +182,9 @@ class QuerySet:
     ):
         if clause is not None:
             self.filter_clauses.append(clause)
+            return self
         else:
-            self._filter_query(**kwargs)
-        return self
+            return self._filter_query(**kwargs)
 
     def exclude(
         self,
@@ -193,9 +193,9 @@ class QuerySet:
     ):
         if clause is not None:
             self.filter_clauses.append(clause)
+            return self
         else:
-            self._filter_query(_exclude=True, **kwargs)
-        return self
+            return self._filter_query(_exclude=True, **kwargs)
 
     def _filter_query(self, _exclude: bool = False, **kwargs):
         clauses = []
