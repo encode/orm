@@ -43,6 +43,8 @@ notes = await Note.objects.exclude(completed=False).all()
 
 ### .filter()
 
+#### Django-style lookup
+
 To filter instances:
 
 ```python
@@ -68,6 +70,21 @@ notes = await Note.objects.filter(text__icontains="mum").all()
 
 notes = await Note.objects.filter(id__in=[1, 2, 3]).all()
 ```
+
+#### SQLAlchemy filter operators
+
+The `filter` method also accepts SQLAlchemy filter operators:
+
+```python
+notes = await Note.objects.filter(Note.columns.text.contains("mum")).all()
+
+notes = await Note.objects.filter(Note.columns.id.in_([1, 2, 3])).all()
+```
+
+Here `Note.columns` refers to the columns of the underlying SQLAlchemy table.
+
+!!! note
+    Note that `Note.columns` returns SQLAlchemy table columns, whereas `Note.fields` returns `orm` fields.
 
 ### .limit()
 

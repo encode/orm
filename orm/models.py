@@ -96,6 +96,10 @@ class ModelMeta(type):
             cls._table = cls.build_table()
         return cls._table
 
+    @property
+    def columns(cls) -> sqlalchemy.sql.ColumnCollection:
+        return cls._table.columns
+
 
 class QuerySet:
     ESCAPE_CHARACTERS = ["%", "_"]
@@ -171,11 +175,27 @@ class QuerySet:
 
         return expr
 
-    def filter(self, **kwargs):
-        return self._filter_query(**kwargs)
+    def filter(
+        self,
+        clause: typing.Optional[sqlalchemy.sql.expression.BinaryExpression] = None,
+        **kwargs: typing.Any,
+    ):
+        if clause is not None:
+            self.filter_clauses.append(clause)
+            return self
+        else:
+            return self._filter_query(**kwargs)
 
-    def exclude(self, **kwargs):
-        return self._filter_query(_exclude=True, **kwargs)
+    def exclude(
+        self,
+        clause: typing.Optional[sqlalchemy.sql.expression.BinaryExpression] = None,
+        **kwargs: typing.Any,
+    ):
+        if clause is not None:
+            self.filter_clauses.append(clause)
+            return self
+        else:
+            return self._filter_query(_exclude=True, **kwargs)
 
     def _filter_query(self, _exclude: bool = False, **kwargs):
         clauses = []
