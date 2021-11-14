@@ -140,7 +140,7 @@ class QuerySet:
     def pkname(self):
         return self.model_cls.pkname
 
-    def build_select_expression(self):
+    def _build_select_expression(self):
         tables = [self.table]
         select_from = self.table
 
@@ -340,7 +340,7 @@ class QuerySet:
         )
 
     async def exists(self) -> bool:
-        expr = self.build_select_expression()
+        expr = self._build_select_expression()
         expr = sqlalchemy.exists(expr).select()
         return await self.database.fetch_val(expr)
 
@@ -365,7 +365,7 @@ class QuerySet:
         )
 
     async def count(self) -> int:
-        expr = self.build_select_expression().alias("subquery_for_count")
+        expr = self._build_select_expression().alias("subquery_for_count")
         expr = sqlalchemy.func.count().select().select_from(expr)
         return await self.database.fetch_val(expr)
 
@@ -373,10 +373,10 @@ class QuerySet:
         if kwargs:
             return await self.filter(**kwargs).all()
 
-        expr = self.build_select_expression()
+        expr = self._build_select_expression()
         rows = await self.database.fetch_all(expr)
         return [
-            self.model_cls.from_row(row, select_related=self._select_related)
+            self.model_cls._from_row(row, select_related=self._select_related)
             for row in rows
         ]
 
@@ -384,14 +384,14 @@ class QuerySet:
         if kwargs:
             return await self.filter(**kwargs).get()
 
-        expr = self.build_select_expression().limit(2)
+        expr = self._build_select_expression().limit(2)
         rows = await self.database.fetch_all(expr)
 
         if not rows:
             raise NoMatch()
         if len(rows) > 1:
             raise MultipleMatches()
-        return self.model_cls.from_row(rows[0], select_related=self._select_related)
+        return self.model_cls._from_row(rows[0], select_related=self._select_related)
 
     async def first(self, **kwargs):
         if kwargs:
@@ -550,7 +550,7 @@ class Model(metaclass=ModelMeta):
             setattr(self, key, value)
 
     @classmethod
-    def from_row(cls, row, select_related=[]):
+    def _from_row(cls, row, select_related=[]):
         """
         Instantiate a model instance, given a database row.
         """
@@ -561,10 +561,10 @@ class Model(metaclass=ModelMeta):
             if "__" in related:
                 first_part, remainder = related.split("__", 1)
                 model_cls = cls.fields[first_part].target
-                item[first_part] = model_cls.from_row(row, select_related=[remainder])
+                item[first_part] = model_cls._from_row(row, select_related=[remainder])
             else:
                 model_cls = cls.fields[related].target
-                item[related] = model_cls.from_row(row)
+                item[related] = model_cls._from_row(row)
 
         # Pull out the regular column values.
         for column in cls.table.columns:
