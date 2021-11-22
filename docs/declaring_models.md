@@ -31,9 +31,9 @@ ORM can create or drop database and tables from models using SQLAlchemy.
 You can use the following methods:
 
 ```python
-models.create_all()
+await models.create_all()
 
-models.drop_all()
+await models.drop_all()
 ```
 
 ## Data types

@@ -33,10 +33,10 @@ class Product(orm.Model):
 
 
 @pytest.fixture(autouse=True, scope="function")
-def create_test_database():
-    models.create_all()
+async def create_test_database():
+    await models.create_all()
     yield
-    models.drop_all()
+    await models.drop_all()
 
 
 @pytest.fixture(autouse=True)

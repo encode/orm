@@ -1,6 +1,5 @@
 import typing
 
-import anyio
 import databases
 import sqlalchemy
 import typesystem
@@ -28,15 +27,8 @@ class ModelRegistry:
         self.models = {}
         self.metadata = sqlalchemy.MetaData()
 
-    def create_all(self):
+    async def create_all(self):
         url = self._get_database_url()
-        anyio.run(self._create_all, url)
-
-    def drop_all(self):
-        url = self._get_database_url()
-        anyio.run(self._drop_all, url)
-
-    async def _create_all(self, url: str):
         engine = create_async_engine(url)
 
         for model_cls in self.models.values():
@@ -48,7 +40,8 @@ class ModelRegistry:
 
         await engine.dispose()
 
-    async def _drop_all(self, url: str):
+    async def drop_all(self):
+        url = self._get_database_url()
         engine = create_async_engine(url)
 
         for model_cls in self.models.values():
