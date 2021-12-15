@@ -101,7 +101,7 @@ class Boolean(ModelField):
         return sqlalchemy.Boolean()
 
 
-class AutoAddMixin(ModelField):
+class AutoNowMixin(ModelField):
     def __init__(self, auto_now=False, auto_now_add=False, **kwargs):
         self.auto_now = auto_now
         self.auto_now_add = auto_now_add
@@ -113,7 +113,7 @@ class AutoAddMixin(ModelField):
         super().__init__(**kwargs)
 
 
-class DateTime(AutoAddMixin):
+class DateTime(AutoNowMixin):
     def get_validator(self, **kwargs) -> typesystem.Field:
         if self.auto_now_add or self.auto_now:
             kwargs["default"] = datetime.now
@@ -123,7 +123,7 @@ class DateTime(AutoAddMixin):
         return sqlalchemy.DateTime()
 
 
-class Date(AutoAddMixin):
+class Date(AutoNowMixin):
     def get_validator(self, **kwargs) -> typesystem.Field:
         if self.auto_now_add or self.auto_now:
             kwargs["default"] = date.today

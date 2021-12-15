@@ -33,7 +33,7 @@ class Product(orm.Model):
         "created": orm.DateTime(default=datetime.datetime.now),
         "created_day": orm.Date(default=datetime.date.today),
         "created_time": orm.Time(default=time),
-        "created_auto_now_add": orm.DateTime(auto_now_add=True),
+        "created_auto_now_add": orm.Date(auto_now_add=True),
         "updated": orm.DateTime(auto_now=True),
         "data": orm.JSON(default={}),
         "description": orm.Text(allow_blank=True),
@@ -75,8 +75,8 @@ async def test_model_crud():
     product = await Product.objects.get(pk=product.pk)
     assert product.created.year == datetime.datetime.now().year
     assert product.created_day == datetime.date.today()
-    assert product.created_auto_now_add.today == datetime.datetime.now().today
-    assert product.updated.today == datetime.datetime.now().today
+    assert product.created_auto_now_add.today() == datetime.date.today()
+    assert product.updated.year == datetime.datetime.now().year
     assert product.data == {}
     assert product.description == ""
     assert product.huge_number == 0
