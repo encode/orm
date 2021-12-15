@@ -6,7 +6,8 @@ import typesystem
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from orm.exceptions import MultipleMatches, NoMatch
-from orm.fields import String, Text
+from orm.fields import String, Text,Date,DateTime
+from datetime import datetime,date
 
 FILTER_OPERATORS = {
     "exact": "__eq__",
@@ -19,6 +20,14 @@ FILTER_OPERATORS = {
     "lt": "__lt__",
     "lte": "__le__",
 }
+
+def _update_auto_now_fields(kwargs, fields):
+    for key, value in fields.items():
+        if isinstance(value,DateTime) and value.auto_now:
+            kwargs[key] = datetime.now()
+        elif isinstance(value,Date) and value.auto_now:
+            kwargs[key] = date.today()
+    return kwargs
 
 
 class ModelRegistry:
@@ -400,7 +409,6 @@ class QuerySet:
             fields={key: value.validator for key, value in fields.items()}
         )
         kwargs = validator.validate(kwargs)
-
         for key, value in fields.items():
             if value.validator.read_only and value.validator.has_default():
                 kwargs[key] = value.validator.get_default_value()
@@ -420,8 +428,8 @@ class QuerySet:
         for filter_clause in self.filter_clauses:
             expr = expr.where(filter_clause)
 
-        await self.database.execute(expr)
-
+        await self.database.execute(expr)        
+                
     async def update(self, **kwargs) -> None:
         fields = {
             key: field.validator
@@ -429,8 +437,7 @@ class QuerySet:
             if key in kwargs
         }
         validator = typesystem.Schema(fields=fields)
-        kwargs = validator.validate(kwargs)
-
+        kwargs = _update_auto_now_fields(validator.validate(kwargs), self.model_cls.fields)
         expr = self.table.update().values(**kwargs)
 
         for filter_clause in self.filter_clauses:
@@ -513,11 +520,9 @@ class Model(metaclass=ModelMeta):
             key: field.validator for key, field in self.fields.items() if key in kwargs
         }
         validator = typesystem.Schema(fields=fields)
-        kwargs = validator.validate(kwargs)
-
+        kwargs = _update_auto_now_fields(validator.validate(kwargs), self.fields)
         pk_column = getattr(self.table.c, self.pkname)
         expr = self.table.update().values(**kwargs).where(pk_column == self.pk)
-
         await self.database.execute(expr)
 
         # Update the model instance.
