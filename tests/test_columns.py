@@ -85,7 +85,6 @@ async def test_model_crud():
     assert product.value is None
     assert product.uuid is None
 
-    last_updated = product.updated
     await product.update(
         data={"foo": 123},
         value=123.456,
@@ -100,7 +99,7 @@ async def test_model_crud():
     assert product.status == StatusEnum.RELEASED
     assert product.price == decimal.Decimal("999.99")
     assert product.uuid == uuid.UUID("01175cde-c18f-4a13-a492-21bd9e1cb01b")
-    assert product.updated != last_updated
+    last_updated = product.updated
 
     user = await User.objects.create()
     assert isinstance(user.pk, uuid.UUID)
@@ -120,3 +119,8 @@ async def test_model_crud():
     user = await User.objects.get()
     assert isinstance(user.ipaddress, (ipaddress.IPv4Address, ipaddress.IPv6Address))
     assert user.url == "https://encode.io"
+    # Test auto_now update
+    await product.update(
+        data={"foo": 1234},
+    )
+    assert product.updated != last_updated
