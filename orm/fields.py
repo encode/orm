@@ -1,10 +1,10 @@
 import typing
+from datetime import date, datetime
 
 import sqlalchemy
 import typesystem
 
 from orm.sqlalchemy_fields import GUID, GenericIP
-from datetime import datetime, date
 
 
 class ModelField:
@@ -102,7 +102,7 @@ class Boolean(ModelField):
 
 
 class AutoAddMixin(ModelField):
-    def __init__(self,auto_now=False,auto_now_add=False,**kwargs):
+    def __init__(self, auto_now=False, auto_now_add=False, **kwargs):
         self.auto_now = auto_now
         self.auto_now_add = auto_now_add
         if auto_now_add and auto_now:
@@ -111,10 +111,10 @@ class AutoAddMixin(ModelField):
             kwargs["read_only"] = True
             kwargs["allow_blank"] = True
         super().__init__(**kwargs)
-        
-        
-class DateTime(AutoAddMixin):    
-    def get_validator(self,**kwargs) -> typesystem.Field:
+
+
+class DateTime(AutoAddMixin):
+    def get_validator(self, **kwargs) -> typesystem.Field:
         if self.auto_now_add or self.auto_now:
             kwargs["default"] = datetime.now
         return typesystem.DateTime(**kwargs)
@@ -124,7 +124,6 @@ class DateTime(AutoAddMixin):
 
 
 class Date(AutoAddMixin):
-
     def get_validator(self, **kwargs) -> typesystem.Field:
         if self.auto_now_add or self.auto_now:
             kwargs["default"] = date.today

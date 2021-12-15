@@ -1,4 +1,5 @@
 import typing
+from datetime import date, datetime
 
 import databases
 import sqlalchemy
@@ -6,8 +7,7 @@ import typesystem
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from orm.exceptions import MultipleMatches, NoMatch
-from orm.fields import String, Text,Date,DateTime
-from datetime import datetime,date
+from orm.fields import Date, DateTime, String, Text
 
 FILTER_OPERATORS = {
     "exact": "__eq__",
@@ -21,11 +21,12 @@ FILTER_OPERATORS = {
     "lte": "__le__",
 }
 
+
 def _update_auto_now_fields(kwargs, fields):
     for key, value in fields.items():
-        if isinstance(value,DateTime) and value.auto_now:
+        if isinstance(value, DateTime) and value.auto_now:
             kwargs[key] = datetime.now()
-        elif isinstance(value,Date) and value.auto_now:
+        elif isinstance(value, Date) and value.auto_now:
             kwargs[key] = date.today()
     return kwargs
 
@@ -428,8 +429,8 @@ class QuerySet:
         for filter_clause in self.filter_clauses:
             expr = expr.where(filter_clause)
 
-        await self.database.execute(expr)        
-                
+        await self.database.execute(expr)
+
     async def update(self, **kwargs) -> None:
         fields = {
             key: field.validator
@@ -437,7 +438,9 @@ class QuerySet:
             if key in kwargs
         }
         validator = typesystem.Schema(fields=fields)
-        kwargs = _update_auto_now_fields(validator.validate(kwargs), self.model_cls.fields)
+        kwargs = _update_auto_now_fields(
+            validator.validate(kwargs), self.model_cls.fields
+        )
         expr = self.table.update().values(**kwargs)
 
         for filter_clause in self.filter_clauses:
