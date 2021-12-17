@@ -33,8 +33,10 @@ class Product(orm.Model):
         "created": orm.DateTime(default=datetime.datetime.now),
         "created_day": orm.Date(default=datetime.date.today),
         "created_time": orm.Time(default=time),
-        "created_auto_now_add": orm.Date(auto_now_add=True),
-        "updated": orm.DateTime(auto_now=True),
+        "created_date": orm.Date(auto_now_add=True),
+        "created_datetime": orm.DateTime(auto_now_add=True),
+        "updated_datetime": orm.DateTime(auto_now=True),
+        "updated_date": orm.Date(auto_now=True),
         "data": orm.JSON(default={}),
         "description": orm.Text(allow_blank=True),
         "huge_number": orm.BigInteger(default=0),
@@ -75,8 +77,10 @@ async def test_model_crud():
     product = await Product.objects.get(pk=product.pk)
     assert product.created.year == datetime.datetime.now().year
     assert product.created_day == datetime.date.today()
-    assert product.created_auto_now_add.today() == datetime.date.today()
-    assert product.updated.year == datetime.datetime.now().year
+    assert product.created_date.today() == datetime.date.today()
+    assert product.created_datetime.year == datetime.datetime.now().year
+    assert product.updated_date.today() == datetime.date.today()
+    assert product.updated_datetime.year == datetime.datetime.now().year
     assert product.data == {}
     assert product.description == ""
     assert product.huge_number == 0
@@ -99,7 +103,9 @@ async def test_model_crud():
     assert product.status == StatusEnum.RELEASED
     assert product.price == decimal.Decimal("999.99")
     assert product.uuid == uuid.UUID("01175cde-c18f-4a13-a492-21bd9e1cb01b")
-    last_updated = product.updated
+
+    last_updated_datetime = product.updated_datetime
+    last_updated_date = product.updated_date
 
     user = await User.objects.create()
     assert isinstance(user.pk, uuid.UUID)
@@ -123,4 +129,5 @@ async def test_model_crud():
     await product.update(
         data={"foo": 1234},
     )
-    assert product.updated != last_updated
+    assert product.updated_datetime != last_updated_datetime
+    assert product.updated_date == last_updated_date

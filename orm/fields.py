@@ -109,7 +109,6 @@ class AutoNowMixin(ModelField):
             raise ValueError("auto_now and auto_now_add cannot be both True")
         if auto_now_add or auto_now:
             kwargs["read_only"] = True
-            kwargs["allow_blank"] = True
         super().__init__(**kwargs)
 
 

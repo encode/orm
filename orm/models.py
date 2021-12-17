@@ -1,5 +1,4 @@
 import typing
-from datetime import date, datetime
 
 import databases
 import sqlalchemy
@@ -22,13 +21,13 @@ FILTER_OPERATORS = {
 }
 
 
-def _update_auto_now_fields(kwargs, fields):
+def _update_auto_now_fields(values, fields):
     for key, value in fields.items():
         if isinstance(value, DateTime) and value.auto_now:
-            kwargs[key] = datetime.now()
+            values[key] = value.validator.default()
         elif isinstance(value, Date) and value.auto_now:
-            kwargs[key] = date.today()
-    return kwargs
+            values[key] = value.validator.default()
+    return values
 
 
 class ModelRegistry:
