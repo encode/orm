@@ -25,14 +25,17 @@ class ModelRegistry:
     def __init__(self, database: databases.Database) -> None:
         self.database = database
         self.models = {}
-        self.metadata = sqlalchemy.MetaData()
+        self._metadata = sqlalchemy.MetaData()
+
+    @property
+    def metadata(self):
+        for model_cls in self.models.values():
+            model_cls.build_table()
+        return self._metadata
 
     async def create_all(self):
         url = self._get_database_url()
         engine = create_async_engine(url)
-
-        for model_cls in self.models.values():
-            model_cls.build_table()
 
         async with self.database:
             async with engine.begin() as conn:
@@ -43,9 +46,6 @@ class ModelRegistry:
     async def drop_all(self):
         url = self._get_database_url()
         engine = create_async_engine(url)
-
-        for model_cls in self.models.values():
-            model_cls.build_table()
 
         async with self.database:
             async with engine.begin() as conn:
@@ -498,7 +498,7 @@ class Model(metaclass=ModelMeta):
     @classmethod
     def build_table(cls):
         tablename = cls.tablename
-        metadata = cls.registry.metadata
+        metadata = cls.registry._metadata
         columns = []
         for name, field in cls.fields.items():
             columns.append(field.get_column(name))
