@@ -40,36 +40,43 @@ await models.drop_all()
 
 The following keyword arguments are supported on all field types.
 
-* `primary_key` - A boolean. Determine if column is primary key.
-* `allow_null` - A boolean. Determine if column is nullable.
-* `default` - A value or a callable (function).
-* `index` - A boolean. Determine if database indexes should be created.
-* `unique` - A boolean. Determine if unique constraint should be created.
+- `primary_key` - A boolean. Determine if column is primary key.
+- `allow_null` - A boolean. Determine if column is nullable.
+- `default` - A value or a callable (function).
+- `index` - A boolean. Determine if database indexes should be created.
+- `unique` - A boolean. Determine if unique constraint should be created.
 
 All fields are required unless one of the following is set:
 
-* `allow_null` - A boolean. Determine if column is nullable. Sets the default to `None`.
-* `allow_blank` - A boolean. Determine if empty strings are allowed. Sets the default to `""`.
-* `default` - A value or a callable (function).
+- `allow_null` - A boolean. Determine if column is nullable. Sets the default to `None`.
+- `allow_blank` - A boolean. Determine if empty strings are allowed. Sets the default to `""`.
+- `default` - A value or a callable (function).
+
+Special keyword arguments for `DateTime` and `Date` fields:
+
+- `auto_now` - Automatically set the field to now every time the object is saved. Useful for “last-modified” timestamps. Default=`datetime.date.today()`.
+- `auto_now_add` - Automatically set the field to now when the object is first created. Useful for creation of timestamps. Default=`datetime.datetime.now()`.
+
+**Note**: Setting `auto_now` or `auto_now_add` to True will cause the field to be read_only.
 
 The following column types are supported.
 See `TypeSystem` for [type-specific validation keyword arguments][typesystem-fields].
 
-* `orm.BigInteger()`
-* `orm.Boolean()`
-* `orm.Date()`
-* `orm.DateTime()`
-* `orm.Decimal()`
-* `orm.Email(max_length)`
-* `orm.Enum()`
-* `orm.Float()`
-* `orm.Integer()`
-* `orm.IPAddress()`
-* `orm.String(max_length)`
-* `orm.Text()`
-* `orm.Time()`
-* `orm.URL(max_length)`
-* `orm.UUID()`
-* `orm.JSON()`
+- `orm.BigInteger()`
+- `orm.Boolean()`
+- `orm.Date(auto_now,auto_now_add)`
+- `orm.DateTime(auto_now,auto_now_add)`
+- `orm.Decimal()`
+- `orm.Email(max_length)`
+- `orm.Enum()`
+- `orm.Float()`
+- `orm.Integer()`
+- `orm.IPAddress()`
+- `orm.String(max_length)`
+- `orm.Text()`
+- `orm.Time()`
+- `orm.URL(max_length)`
+- `orm.UUID()`
+- `orm.JSON()`
 
 [typesystem-fields]: https://www.encode.io/typesystem/fields/
