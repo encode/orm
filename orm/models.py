@@ -24,9 +24,9 @@ FILTER_OPERATORS = {
 def _update_auto_now_fields(values, fields):
     for key, value in fields.items():
         if isinstance(value, DateTime) and value.auto_now:
-            values[key] = value.validator.default()
+            values[key] = value.validator.get_default_value()
         elif isinstance(value, Date) and value.auto_now:
-            values[key] = value.validator.default()
+            values[key] = value.validator.get_default_value()
     return values
 
 

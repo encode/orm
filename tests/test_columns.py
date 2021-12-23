@@ -73,14 +73,13 @@ async def rollback_transactions():
 
 async def test_model_crud():
     product = await Product.objects.create()
-
     product = await Product.objects.get(pk=product.pk)
     assert product.created.year == datetime.datetime.now().year
     assert product.created_day == datetime.date.today()
-    assert product.created_date.today() == datetime.date.today()
-    assert product.created_datetime.year == datetime.datetime.now().year
-    assert product.updated_date.today() == datetime.date.today()
-    assert product.updated_datetime.year == datetime.datetime.now().year
+    assert product.created_date == datetime.date.today()
+    assert product.created_datetime.date() == datetime.datetime.now().date()
+    assert product.updated_date == datetime.date.today()
+    assert product.updated_datetime.date() == datetime.datetime.now().date()
     assert product.data == {}
     assert product.description == ""
     assert product.huge_number == 0
@@ -106,7 +105,6 @@ async def test_model_crud():
 
     last_updated_datetime = product.updated_datetime
     last_updated_date = product.updated_date
-
     user = await User.objects.create()
     assert isinstance(user.pk, uuid.UUID)
 
@@ -131,3 +129,16 @@ async def test_model_crud():
     )
     assert product.updated_datetime != last_updated_datetime
     assert product.updated_date == last_updated_date
+
+
+async def test_both_auto_now_and_auto_now_add_raise_error():
+    with pytest.raises(ValueError):
+
+        class Product(orm.Model):
+            registry = models
+            fields = {
+                "id": orm.Integer(primary_key=True),
+                "created_datetime": orm.DateTime(auto_now_add=True, auto_now=True),
+            }
+
+        await Product.objects.create()
