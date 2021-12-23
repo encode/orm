@@ -54,10 +54,13 @@ All fields are required unless one of the following is set:
 
 Special keyword arguments for `DateTime` and `Date` fields:
 
-- `auto_now` - Automatically set the field to now every time the object is saved. Useful for “last-modified” timestamps. Default=`datetime.date.today()`.
-- `auto_now_add` - Automatically set the field to now when the object is first created. Useful for creation of timestamps. Default=`datetime.datetime.now()`.
+- `auto_now` - Automatically set the field to now every time the object is saved. Useful for “last-modified” timestamps.
+- `auto_now_add` - Automatically set the field to now when the object is first created. Useful for creation of timestamps.
 
-**Note**: Setting `auto_now` or `auto_now_add` to True will cause the field to be read_only.
+Default=`datetime.date.today()` for `DateField` and `datetime.datetime.now()` for `DateTimeField`.
+
+!!! note
+    Setting `auto_now` or `auto_now_add` to True will cause the field to be read_only.
 
 The following column types are supported.
 See `TypeSystem` for [type-specific validation keyword arguments][typesystem-fields].
