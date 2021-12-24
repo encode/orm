@@ -1,4 +1,5 @@
 import typing
+from datetime import date, datetime
 
 import sqlalchemy
 import typesystem
@@ -100,16 +101,31 @@ class Boolean(ModelField):
         return sqlalchemy.Boolean()
 
 
-class DateTime(ModelField):
+class AutoNowMixin(ModelField):
+    def __init__(self, auto_now=False, auto_now_add=False, **kwargs):
+        self.auto_now = auto_now
+        self.auto_now_add = auto_now_add
+        if auto_now_add and auto_now:
+            raise ValueError("auto_now and auto_now_add cannot be both True")
+        if auto_now_add or auto_now:
+            kwargs["read_only"] = True
+        super().__init__(**kwargs)
+
+
+class DateTime(AutoNowMixin):
     def get_validator(self, **kwargs) -> typesystem.Field:
+        if self.auto_now_add or self.auto_now:
+            kwargs["default"] = datetime.now
         return typesystem.DateTime(**kwargs)
 
     def get_column_type(self):
         return sqlalchemy.DateTime()
 
 
-class Date(ModelField):
+class Date(AutoNowMixin):
     def get_validator(self, **kwargs) -> typesystem.Field:
+        if self.auto_now_add or self.auto_now:
+            kwargs["default"] = date.today
         return typesystem.Date(**kwargs)
 
     def get_column_type(self):
