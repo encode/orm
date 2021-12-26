@@ -170,7 +170,7 @@ class ForeignKey(ModelField):
         return self._target
 
     def get_validator(self, **kwargs) -> typesystem.Field:
-        return self.ForeignKeyValidator()
+        return self.ForeignKeyValidator(**kwargs)
 
     def get_column(self, name: str) -> sqlalchemy.Column:
         target = self.target
