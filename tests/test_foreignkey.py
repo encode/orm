@@ -269,3 +269,12 @@ async def test_one_to_one_crud():
 
     with pytest.raises(exceptions):
         await Person.objects.create(email="contact@encode.io", profile=profile)
+
+
+async def test_nullable_foreign_key():
+    await Member.objects.create(email="dev@encode.io")
+
+    member = await Member.objects.get()
+
+    assert member.email == "dev@encode.io"
+    assert member.team.pk is None
