@@ -277,3 +277,4 @@ async def test_nullable_foreign_key():
     member = await Member.objects.get()
 
     assert member.email == "dev@encode.io"
+    assert member.team.pk is None
