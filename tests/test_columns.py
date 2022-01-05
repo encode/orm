@@ -142,3 +142,20 @@ async def test_both_auto_now_and_auto_now_add_raise_error():
             }
 
         await Product.objects.create()
+
+
+async def test_bulk_create():
+    await Product.objects.bulk_create(
+        [
+            {"data": {"foo": 123}, "value": 123.456, "status": StatusEnum.RELEASED},
+            {"data": {"foo": 456}, "value": 456.789, "status": StatusEnum.DRAFT},
+        ]
+    )
+    products = await Product.objects.all()
+    assert len(products) == 2
+    assert products[0].data == {"foo": 123}
+    assert products[0].value == 123.456
+    assert products[0].status == StatusEnum.RELEASED
+    assert products[1].data == {"foo": 456}
+    assert products[1].value == 456.789
+    assert products[1].status == StatusEnum.DRAFT

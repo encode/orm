@@ -423,6 +423,22 @@ class QuerySet:
 
         return instance
 
+    async def bulk_create(self, objs: typing.List[typing.Dict]) -> None:
+        new_objs = []
+        fields = self.model_cls.fields
+        validator = typesystem.Schema(
+            fields={key: value.validator for key, value in fields.items()}
+        )
+        for obj in objs:
+            obj = validator.validate(obj)
+            for key, value in fields.items():
+                if value.validator.read_only and value.validator.has_default():
+                    obj[key] = value.validator.get_default_value()
+            new_objs.append(obj)
+
+        expr = self.table.insert()
+        await self.database.execute_many(expr, new_objs)
+
     async def delete(self) -> None:
         expr = self.table.delete()
         for filter_clause in self.filter_clauses:
