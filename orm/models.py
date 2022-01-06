@@ -425,10 +425,7 @@ class QuerySet:
         return instance
 
     async def bulk_create(self, objs: typing.List[typing.Dict]) -> None:
-        new_objs = []
-        for obj in objs:
-            obj = self._validate_kwargs(**obj)
-            new_objs.append(obj)
+        new_objs = [self._validate_kwargs(**obj) for obj in objs]
 
         expr = self.table.insert().values(new_objs)
         await self.database.execute(expr)
