@@ -141,6 +141,20 @@ await Note.objects.create(text="Call Mum.", completed=True)
 await Note.objects.create(text="Send invoices.", completed=True)
 ```
 
+### .bulk_create()
+
+You need to pass a list of dictionaries of required fields to create multiple objects:
+
+```python
+await Product.objects.bulk_create(
+    [
+        {"data": {"foo": 123}, "value": 123.456, "status": StatusEnum.RELEASED},
+        {"data": {"foo": 456}, "value": 456.789, "status": StatusEnum.DRAFT},
+
+    ]
+)
+```
+
 ### .delete()
 
 You can `delete` instances by calling `.delete()` on a queryset:

@@ -23,9 +23,7 @@ FILTER_OPERATORS = {
 
 def _update_auto_now_fields(values, fields):
     for key, value in fields.items():
-        if isinstance(value, DateTime) and value.auto_now:
-            values[key] = value.validator.get_default_value()
-        elif isinstance(value, Date) and value.auto_now:
+        if isinstance(value, (DateTime, Date)) and value.auto_now:
             values[key] = value.validator.get_default_value()
     return values
 
@@ -403,7 +401,7 @@ class QuerySet:
         if rows:
             return rows[0]
 
-    async def create(self, **kwargs):
+    def _validate_kwargs(self, **kwargs):
         fields = self.model_cls.fields
         validator = typesystem.Schema(
             fields={key: value.validator for key, value in fields.items()}
@@ -412,7 +410,10 @@ class QuerySet:
         for key, value in fields.items():
             if value.validator.read_only and value.validator.has_default():
                 kwargs[key] = value.validator.get_default_value()
+        return kwargs
 
+    async def create(self, **kwargs):
+        kwargs = self._validate_kwargs(**kwargs)
         instance = self.model_cls(**kwargs)
         expr = self.table.insert().values(**kwargs)
 
@@ -422,6 +423,12 @@ class QuerySet:
             await self.database.execute(expr)
 
         return instance
+
+    async def bulk_create(self, objs: typing.List[typing.Dict]) -> None:
+        new_objs = [self._validate_kwargs(**obj) for obj in objs]
+
+        expr = self.table.insert().values(new_objs)
+        await self.database.execute(expr)
 
     async def delete(self) -> None:
         expr = self.table.delete()
