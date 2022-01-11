@@ -185,8 +185,8 @@ async def test_bulk_update():
     products[1].status = StatusEnum.RELEASED
     products[0].data = {"foo": 1234}
     products[1].data = {"foo": 5678}
-    products[0].value = 1234.567
-    products[1].value = 5678.891
+    products[0].value = 345.5
+    products[1].value = 789.8
     await Product.objects.bulk_update(
         products, fields=["created_day", "status", "data", "value"]
     )
@@ -197,5 +197,5 @@ async def test_bulk_update():
     assert products[1].status == StatusEnum.RELEASED
     assert products[0].data == {"foo": 1234}
     assert products[1].data == {"foo": 5678}
-    assert products[0].value == 1234.567
-    assert products[1].value == 5678.891
+    assert products[0].value == 345.5
+    assert products[1].value == 789.8
