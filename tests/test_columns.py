@@ -199,39 +199,3 @@ async def test_bulk_update():
     assert products[1].data == {"foo": 5678}
     assert products[0].value == 1234.567
     assert products[1].value == 5678.891
-
-
-async def test_bulk_update_with_relation():
-    class Album(orm.Model):
-        registry = models
-        fields = {
-            "id": orm.Integer(primary_key=True),
-            "name": orm.Text(),
-        }
-
-    class Track(orm.Model):
-        registry = models
-        fields = {
-            "id": orm.Integer(primary_key=True),
-            "name": orm.Text(),
-            "album": orm.ForeignKey(Album),
-        }
-
-    await models.create_all()
-
-    album = await Album.objects.create(name="foo")
-    album2 = await Album.objects.create(name="bar")
-
-    await Track.objects.bulk_create(
-        [
-            {"name": "foo", "album": album},
-            {"name": "bar", "album": album},
-        ]
-    )
-    tracks = await Track.objects.all()
-    for track in tracks:
-        track.album = album2
-    await Track.objects.bulk_update(tracks, fields=["album"])
-    tracks = await Track.objects.all()
-    assert tracks[0].album.pk == album2.pk
-    assert tracks[1].album.pk == album2.pk

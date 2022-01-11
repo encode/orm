@@ -278,3 +278,22 @@ async def test_nullable_foreign_key():
 
     assert member.email == "dev@encode.io"
     assert member.team.pk is None
+
+
+async def test_bulk_update_with_relation():
+    album = await Album.objects.create(name="foo")
+    album2 = await Album.objects.create(name="bar")
+
+    await Track.objects.bulk_create(
+        [
+            {"name": "foo", "album": album, "position": 1, "title": "foo"},
+            {"name": "bar", "album": album, "position": 2, "title": "bar"},
+        ]
+    )
+    tracks = await Track.objects.all()
+    for track in tracks:
+        track.album = album2
+    await Track.objects.bulk_update(tracks, fields=["album"])
+    tracks = await Track.objects.all()
+    assert tracks[0].album.pk == album2.pk
+    assert tracks[1].album.pk == album2.pk
