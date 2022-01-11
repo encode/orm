@@ -159,3 +159,79 @@ async def test_bulk_create():
     assert products[1].data == {"foo": 456}
     assert products[1].value == 456.789
     assert products[1].status == StatusEnum.DRAFT
+
+
+async def test_bulk_update():
+    await Product.objects.bulk_create(
+        [
+            {
+                "created": "2020-01-01T00:00:00Z",
+                "data": {"foo": 123},
+                "value": 123.456,
+                "status": StatusEnum.RELEASED,
+            },
+            {
+                "created": "2020-01-01T00:00:00Z",
+                "data": {"foo": 456},
+                "value": 456.789,
+                "status": StatusEnum.DRAFT,
+            },
+        ]
+    )
+    products = await Product.objects.all()
+    products[0].created = "2021-01-01T00:00:00Z"
+    products[1].created = "2022-01-01T00:00:00Z"
+    products[0].status = StatusEnum.DRAFT
+    products[1].status = StatusEnum.RELEASED
+    products[0].data = {"foo": 1234}
+    products[1].data = {"foo": 5678}
+    products[0].value = 1234.567
+    products[1].value = 5678.891
+    await Product.objects.bulk_update(
+        products, fields=["created", "status", "data", "value"]
+    )
+    products = await Product.objects.all()
+    assert products[0].created == datetime.datetime(2021, 1, 1, 0, 0, 0)
+    assert products[1].created == datetime.datetime(2022, 1, 1, 0, 0, 0)
+    assert products[0].status == StatusEnum.DRAFT
+    assert products[1].status == StatusEnum.RELEASED
+    assert products[0].data == {"foo": 1234}
+    assert products[1].data == {"foo": 5678}
+    assert products[0].value == 1234.567
+    assert products[1].value == 5678.891
+
+
+async def test_bulk_update_with_relation():
+    class Album(orm.Model):
+        registry = models
+        fields = {
+            "id": orm.Integer(primary_key=True),
+            "name": orm.Text(),
+        }
+
+    class Track(orm.Model):
+        registry = models
+        fields = {
+            "id": orm.Integer(primary_key=True),
+            "name": orm.Text(),
+            "album": orm.ForeignKey(Album),
+        }
+
+    await models.create_all()
+
+    album = await Album.objects.create(name="foo")
+    album2 = await Album.objects.create(name="bar")
+
+    await Track.objects.bulk_create(
+        [
+            {"name": "foo", "album": album},
+            {"name": "bar", "album": album},
+        ]
+    )
+    tracks = await Track.objects.all()
+    for track in tracks:
+        track.album = album2
+    await Track.objects.bulk_update(tracks, fields=["album"])
+    tracks = await Track.objects.all()
+    assert tracks[0].album.pk == album2.pk
+    assert tracks[1].album.pk == album2.pk

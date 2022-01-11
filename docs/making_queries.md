@@ -53,15 +53,15 @@ notes = await Note.objects.filter(completed=True).all()
 
 There are some special operators defined automatically on every column:
 
-* `in` - SQL `IN` operator.
-* `exact` - filter instances matching exact value.
-* `iexact` - same as `exact` but case-insensitive.
-* `contains` - filter instances containing value.
-* `icontains` - same as `contains` but case-insensitive.
-* `lt` - filter instances having value `Less Than`.
-* `lte` - filter instances having value `Less Than Equal`.
-* `gt` - filter instances having value `Greater Than`.
-* `gte` - filter instances having value `Greater Than Equal`.
+- `in` - SQL `IN` operator.
+- `exact` - filter instances matching exact value.
+- `iexact` - same as `exact` but case-insensitive.
+- `contains` - filter instances containing value.
+- `icontains` - same as `contains` but case-insensitive.
+- `lt` - filter instances having value `Less Than`.
+- `lte` - filter instances having value `Less Than Equal`.
+- `gt` - filter instances having value `Greater Than`.
+- `gte` - filter instances having value `Greater Than Equal`.
 
 Example usage:
 
@@ -84,7 +84,7 @@ notes = await Note.objects.filter(Note.columns.id.in_([1, 2, 3])).all()
 Here `Note.columns` refers to the columns of the underlying SQLAlchemy table.
 
 !!! note
-    Note that `Note.columns` returns SQLAlchemy table columns, whereas `Note.fields` returns `orm` fields.
+Note that `Note.columns` returns SQLAlchemy table columns, whereas `Note.fields` returns `orm` fields.
 
 ### .limit()
 
@@ -119,7 +119,7 @@ notes = await Note.objects.order_by("text", "-id").all()
 ```
 
 !!! note
-    This will sort by ascending `text` and descending `id`.
+This will sort by ascending `text` and descending `id`.
 
 ## Returning results
 
@@ -146,10 +146,10 @@ await Note.objects.create(text="Send invoices.", completed=True)
 You need to pass a list of dictionaries of required fields to create multiple objects:
 
 ```python
-await Product.objects.bulk_create(
+await Note.objects.bulk_create(
     [
-        {"data": {"foo": 123}, "value": 123.456, "status": StatusEnum.RELEASED},
-        {"data": {"foo": 456}, "value": 456.789, "status": StatusEnum.DRAFT},
+        {"text": "Buy the groceries", "completed": False},
+        {"text": "Call Mum.", "completed": True},
 
     ]
 )
@@ -209,7 +209,7 @@ note = await Note.objects.get(id=1)
 ```
 
 !!! note
-    `.get()` expects to find only one instance. This can raise `NoMatch` or `MultipleMatches`.
+`.get()` expects to find only one instance. This can raise `NoMatch` or `MultipleMatches`.
 
 ### .update()
 
@@ -233,6 +233,18 @@ note = await Note.objects.first()
 await note.update(completed=True)
 ```
 
+### .bulk_update()
+
+You can also bulk update multiple objects at once by passing a list of objects and a list of fields to update.
+
+```python
+notes = await Note.objects.all()
+for note in notes :
+    note.completed = True
+
+await Note.objects.bulk_update(notes, fields=["completed"])
+```
+
 ## Convenience Methods
 
 ### .get_or_create()
@@ -250,8 +262,7 @@ This will query a `Note` with `text` as `"Going to car wash"`,
 if it doesn't exist, it will use `defaults` argument to create the new instance.
 
 !!! note
-    Since `get_or_create()` is doing a [get()](#get), it can raise `MultipleMatches` exception.
-
+Since `get_or_create()` is doing a [get()](#get), it can raise `MultipleMatches` exception.
 
 ### .update_or_create()
 
@@ -269,4 +280,4 @@ if an instance is found, it will use the `defaults` argument to update the insta
 If it matches no records, it will use the comibnation of arguments to create the new instance.
 
 !!! note
-    Since `update_or_create()` is doing a [get()](#get), it can raise `MultipleMatches` exception.
+Since `update_or_create()` is doing a [get()](#get), it can raise `MultipleMatches` exception.
