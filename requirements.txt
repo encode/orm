@@ -1,4 +1,4 @@
-databases[postgresql, mysql, sqlite]
+databases[postgresql, mysql, sqlite, asyncmy]
 typesystem
 
 # Packaging
