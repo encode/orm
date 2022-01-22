@@ -33,6 +33,10 @@ class Product(orm.Model):
         "created": orm.DateTime(default=datetime.datetime.now),
         "created_day": orm.Date(default=datetime.date.today),
         "created_time": orm.Time(default=time),
+        "created_date": orm.Date(auto_now_add=True),
+        "created_datetime": orm.DateTime(auto_now_add=True),
+        "updated_datetime": orm.DateTime(auto_now=True),
+        "updated_date": orm.Date(auto_now=True),
         "data": orm.JSON(default={}),
         "description": orm.Text(allow_blank=True),
         "huge_number": orm.BigInteger(default=0),
@@ -54,10 +58,10 @@ class User(orm.Model):
 
 
 @pytest.fixture(autouse=True, scope="module")
-def create_test_database():
-    models.create_all()
+async def create_test_database():
+    await models.create_all()
     yield
-    models.drop_all()
+    await models.drop_all()
 
 
 @pytest.fixture(autouse=True)
@@ -69,10 +73,13 @@ async def rollback_transactions():
 
 async def test_model_crud():
     product = await Product.objects.create()
-
     product = await Product.objects.get(pk=product.pk)
     assert product.created.year == datetime.datetime.now().year
     assert product.created_day == datetime.date.today()
+    assert product.created_date == datetime.date.today()
+    assert product.created_datetime.date() == datetime.datetime.now().date()
+    assert product.updated_date == datetime.date.today()
+    assert product.updated_datetime.date() == datetime.datetime.now().date()
     assert product.data == {}
     assert product.description == ""
     assert product.huge_number == 0
@@ -96,6 +103,8 @@ async def test_model_crud():
     assert product.price == decimal.Decimal("999.99")
     assert product.uuid == uuid.UUID("01175cde-c18f-4a13-a492-21bd9e1cb01b")
 
+    last_updated_datetime = product.updated_datetime
+    last_updated_date = product.updated_date
     user = await User.objects.create()
     assert isinstance(user.pk, uuid.UUID)
 
@@ -114,3 +123,39 @@ async def test_model_crud():
     user = await User.objects.get()
     assert isinstance(user.ipaddress, (ipaddress.IPv4Address, ipaddress.IPv6Address))
     assert user.url == "https://encode.io"
+    # Test auto_now update
+    await product.update(
+        data={"foo": 1234},
+    )
+    assert product.updated_datetime != last_updated_datetime
+    assert product.updated_date == last_updated_date
+
+
+async def test_both_auto_now_and_auto_now_add_raise_error():
+    with pytest.raises(ValueError):
+
+        class Product(orm.Model):
+            registry = models
+            fields = {
+                "id": orm.Integer(primary_key=True),
+                "created_datetime": orm.DateTime(auto_now_add=True, auto_now=True),
+            }
+
+        await Product.objects.create()
+
+
+async def test_bulk_create():
+    await Product.objects.bulk_create(
+        [
+            {"data": {"foo": 123}, "value": 123.456, "status": StatusEnum.RELEASED},
+            {"data": {"foo": 456}, "value": 456.789, "status": StatusEnum.DRAFT},
+        ]
+    )
+    products = await Product.objects.all()
+    assert len(products) == 2
+    assert products[0].data == {"foo": 123}
+    assert products[0].value == 123.456
+    assert products[0].status == StatusEnum.RELEASED
+    assert products[1].data == {"foo": 456}
+    assert products[1].value == 456.789
+    assert products[1].status == StatusEnum.DRAFT

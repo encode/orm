@@ -66,7 +66,7 @@ class Note(orm.Model):
     }
 
 # Create the database and tables
-models.create_all()
+await models.create_all()
 
 await Note.objects.create(text="Buy the groceries.", completed=False)
 

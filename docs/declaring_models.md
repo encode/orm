@@ -31,9 +31,9 @@ ORM can create or drop database and tables from models using SQLAlchemy.
 You can use the following methods:
 
 ```python
-models.create_all()
+await models.create_all()
 
-models.drop_all()
+await models.drop_all()
 ```
 
 ## Data types
@@ -52,13 +52,23 @@ All fields are required unless one of the following is set:
 * `allow_blank` - A boolean. Determine if empty strings are allowed. Sets the default to `""`.
 * `default` - A value or a callable (function).
 
+Special keyword arguments for `DateTime` and `Date` fields:
+
+* `auto_now` - Automatically set the field to now every time the object is saved. Useful for “last-modified” timestamps.
+* `auto_now_add` - Automatically set the field to now when the object is first created. Useful for creation of timestamps.
+
+Default=`datetime.date.today()` for `DateField` and `datetime.datetime.now()` for `DateTimeField`.
+
+!!! note
+    Setting `auto_now` or `auto_now_add` to True will cause the field to be read_only.
+
 The following column types are supported.
 See `TypeSystem` for [type-specific validation keyword arguments][typesystem-fields].
 
 * `orm.BigInteger()`
 * `orm.Boolean()`
-* `orm.Date()`
-* `orm.DateTime()`
+* `orm.Date(auto_now, auto_now_add)`
+* `orm.DateTime(auto_now, auto_now_add)`
 * `orm.Decimal()`
 * `orm.Email(max_length)`
 * `orm.Enum()`

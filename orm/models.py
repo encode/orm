@@ -1,13 +1,12 @@
 import typing
 
-import anyio
 import databases
 import sqlalchemy
 import typesystem
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from orm.exceptions import MultipleMatches, NoMatch
-from orm.fields import String, Text
+from orm.fields import Date, DateTime, String, Text
 
 FILTER_OPERATORS = {
     "exact": "__eq__",
@@ -22,25 +21,28 @@ FILTER_OPERATORS = {
 }
 
 
+def _update_auto_now_fields(values, fields):
+    for key, value in fields.items():
+        if isinstance(value, (DateTime, Date)) and value.auto_now:
+            values[key] = value.validator.get_default_value()
+    return values
+
+
 class ModelRegistry:
     def __init__(self, database: databases.Database) -> None:
         self.database = database
         self.models = {}
-        self.metadata = sqlalchemy.MetaData()
+        self._metadata = sqlalchemy.MetaData()
 
-    def create_all(self):
-        url = self._get_database_url()
-        anyio.run(self._create_all, url)
-
-    def drop_all(self):
-        url = self._get_database_url()
-        anyio.run(self._drop_all, url)
-
-    async def _create_all(self, url: str):
-        engine = create_async_engine(url)
-
+    @property
+    def metadata(self):
         for model_cls in self.models.values():
             model_cls.build_table()
+        return self._metadata
+
+    async def create_all(self):
+        url = self._get_database_url()
+        engine = create_async_engine(url)
 
         async with self.database:
             async with engine.begin() as conn:
@@ -48,11 +50,9 @@ class ModelRegistry:
 
         await engine.dispose()
 
-    async def _drop_all(self, url: str):
+    async def drop_all(self):
+        url = self._get_database_url()
         engine = create_async_engine(url)
-
-        for model_cls in self.models.values():
-            model_cls.build_table()
 
         async with self.database:
             async with engine.begin() as conn:
@@ -96,6 +96,10 @@ class ModelMeta(type):
             cls._table = cls.build_table()
         return cls._table
 
+    @property
+    def columns(cls) -> sqlalchemy.sql.ColumnCollection:
+        return cls._table.columns
+
 
 class QuerySet:
     ESCAPE_CHARACTERS = ["%", "_"]
@@ -136,7 +140,7 @@ class QuerySet:
     def pkname(self):
         return self.model_cls.pkname
 
-    def build_select_expression(self):
+    def _build_select_expression(self):
         tables = [self.table]
         select_from = self.table
 
@@ -171,11 +175,27 @@ class QuerySet:
 
         return expr
 
-    def filter(self, **kwargs):
-        return self._filter_query(**kwargs)
+    def filter(
+        self,
+        clause: typing.Optional[sqlalchemy.sql.expression.BinaryExpression] = None,
+        **kwargs: typing.Any,
+    ):
+        if clause is not None:
+            self.filter_clauses.append(clause)
+            return self
+        else:
+            return self._filter_query(**kwargs)
 
-    def exclude(self, **kwargs):
-        return self._filter_query(_exclude=True, **kwargs)
+    def exclude(
+        self,
+        clause: typing.Optional[sqlalchemy.sql.expression.BinaryExpression] = None,
+        **kwargs: typing.Any,
+    ):
+        if clause is not None:
+            self.filter_clauses.append(clause)
+            return self
+        else:
+            return self._filter_query(_exclude=True, **kwargs)
 
     def _filter_query(self, _exclude: bool = False, **kwargs):
         clauses = []
@@ -320,7 +340,7 @@ class QuerySet:
         )
 
     async def exists(self) -> bool:
-        expr = self.build_select_expression()
+        expr = self._build_select_expression()
         expr = sqlalchemy.exists(expr).select()
         return await self.database.fetch_val(expr)
 
@@ -345,7 +365,7 @@ class QuerySet:
         )
 
     async def count(self) -> int:
-        expr = self.build_select_expression().alias("subquery_for_count")
+        expr = self._build_select_expression().alias("subquery_for_count")
         expr = sqlalchemy.func.count().select().select_from(expr)
         return await self.database.fetch_val(expr)
 
@@ -353,10 +373,10 @@ class QuerySet:
         if kwargs:
             return await self.filter(**kwargs).all()
 
-        expr = self.build_select_expression()
+        expr = self._build_select_expression()
         rows = await self.database.fetch_all(expr)
         return [
-            self.model_cls.from_row(row, select_related=self._select_related)
+            self.model_cls._from_row(row, select_related=self._select_related)
             for row in rows
         ]
 
@@ -364,14 +384,14 @@ class QuerySet:
         if kwargs:
             return await self.filter(**kwargs).get()
 
-        expr = self.build_select_expression().limit(2)
+        expr = self._build_select_expression().limit(2)
         rows = await self.database.fetch_all(expr)
 
         if not rows:
             raise NoMatch()
         if len(rows) > 1:
             raise MultipleMatches()
-        return self.model_cls.from_row(rows[0], select_related=self._select_related)
+        return self.model_cls._from_row(rows[0], select_related=self._select_related)
 
     async def first(self, **kwargs):
         if kwargs:
@@ -381,17 +401,19 @@ class QuerySet:
         if rows:
             return rows[0]
 
-    async def create(self, **kwargs):
+    def _validate_kwargs(self, **kwargs):
         fields = self.model_cls.fields
         validator = typesystem.Schema(
             fields={key: value.validator for key, value in fields.items()}
         )
         kwargs = validator.validate(kwargs)
-
         for key, value in fields.items():
             if value.validator.read_only and value.validator.has_default():
                 kwargs[key] = value.validator.get_default_value()
+        return kwargs
 
+    async def create(self, **kwargs):
+        kwargs = self._validate_kwargs(**kwargs)
         instance = self.model_cls(**kwargs)
         expr = self.table.insert().values(**kwargs)
 
@@ -401,6 +423,12 @@ class QuerySet:
             await self.database.execute(expr)
 
         return instance
+
+    async def bulk_create(self, objs: typing.List[typing.Dict]) -> None:
+        new_objs = [self._validate_kwargs(**obj) for obj in objs]
+
+        expr = self.table.insert().values(new_objs)
+        await self.database.execute(expr)
 
     async def delete(self) -> None:
         expr = self.table.delete()
@@ -416,8 +444,9 @@ class QuerySet:
             if key in kwargs
         }
         validator = typesystem.Schema(fields=fields)
-        kwargs = validator.validate(kwargs)
-
+        kwargs = _update_auto_now_fields(
+            validator.validate(kwargs), self.model_cls.fields
+        )
         expr = self.table.update().values(**kwargs)
 
         for filter_clause in self.filter_clauses:
@@ -485,7 +514,7 @@ class Model(metaclass=ModelMeta):
     @classmethod
     def build_table(cls):
         tablename = cls.tablename
-        metadata = cls.registry.metadata
+        metadata = cls.registry._metadata
         columns = []
         for name, field in cls.fields.items():
             columns.append(field.get_column(name))
@@ -500,11 +529,9 @@ class Model(metaclass=ModelMeta):
             key: field.validator for key, field in self.fields.items() if key in kwargs
         }
         validator = typesystem.Schema(fields=fields)
-        kwargs = validator.validate(kwargs)
-
+        kwargs = _update_auto_now_fields(validator.validate(kwargs), self.fields)
         pk_column = getattr(self.table.c, self.pkname)
         expr = self.table.update().values(**kwargs).where(pk_column == self.pk)
-
         await self.database.execute(expr)
 
         # Update the model instance.
@@ -530,7 +557,7 @@ class Model(metaclass=ModelMeta):
             setattr(self, key, value)
 
     @classmethod
-    def from_row(cls, row, select_related=[]):
+    def _from_row(cls, row, select_related=[]):
         """
         Instantiate a model instance, given a database row.
         """
@@ -541,10 +568,10 @@ class Model(metaclass=ModelMeta):
             if "__" in related:
                 first_part, remainder = related.split("__", 1)
                 model_cls = cls.fields[first_part].target
-                item[first_part] = model_cls.from_row(row, select_related=[remainder])
+                item[first_part] = model_cls._from_row(row, select_related=[remainder])
             else:
                 model_cls = cls.fields[related].target
-                item[related] = model_cls.from_row(row)
+                item[related] = model_cls._from_row(row)
 
         # Pull out the regular column values.
         for column in cls.table.columns:

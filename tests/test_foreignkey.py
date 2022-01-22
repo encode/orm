@@ -76,10 +76,10 @@ class Person(orm.Model):
 
 
 @pytest.fixture(autouse=True, scope="module")
-def create_test_database():
-    models.create_all()
+async def create_test_database():
+    await models.create_all()
     yield
-    models.drop_all()
+    await models.drop_all()
 
 
 @pytest.fixture(autouse=True)
@@ -269,3 +269,12 @@ async def test_one_to_one_crud():
 
     with pytest.raises(exceptions):
         await Person.objects.create(email="contact@encode.io", profile=profile)
+
+
+async def test_nullable_foreign_key():
+    await Member.objects.create(email="dev@encode.io")
+
+    member = await Member.objects.get()
+
+    assert member.email == "dev@encode.io"
+    assert member.team.pk is None

@@ -33,10 +33,10 @@ class Product(orm.Model):
 
 
 @pytest.fixture(autouse=True, scope="function")
-def create_test_database():
-    models.create_all()
+async def create_test_database():
+    await models.create_all()
     yield
-    models.drop_all()
+    await models.drop_all()
 
 
 @pytest.fixture(autouse=True)
@@ -312,3 +312,24 @@ async def test_model_update_or_create():
     assert created is False
     assert user.name == "Tom"
     assert user.language == "English"
+
+
+async def test_model_sqlalchemy_filter_operators():
+    user = await User.objects.create(name="George")
+
+    assert user == await User.objects.filter(User.columns.name == "George").get()
+    assert user == await User.objects.filter(User.columns.name.is_not(None)).get()
+    assert (
+        user
+        == await User.objects.filter(User.columns.name.startswith("G"))
+        .filter(User.columns.name.endswith("e"))
+        .get()
+    )
+
+    assert user == await User.objects.exclude(User.columns.name != "Jack").get()
+
+    shirt = await Product.objects.create(name="100%-Cotton", rating=3)
+    assert (
+        shirt
+        == await Product.objects.filter(Product.columns.name.contains("Cotton")).get()
+    )

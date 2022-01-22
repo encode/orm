@@ -50,7 +50,7 @@ setup(
     author_email="tom@tomchristie.com",
     packages=get_packages(PACKAGE),
     package_data={PACKAGE: ["py.typed"]},
-    install_requires=["anyio>=3.0.0,<4", "databases~=0.5", "typesystem==0.3.1"],
+    install_requires=["databases~=0.5", "typesystem==0.3.1"],
     extras_require={
         "postgresql": ["asyncpg"],
         "mysql": ["aiomysql"],

@@ -22,8 +22,6 @@ MySQL, and SQLite. ORM is built with:
 Because ORM is built on SQLAlchemy core, you can use Alembic to provide
 database migrations.
 
-**ORM is still under development: We recommend pinning any dependencies with `orm~=0.3`**
-
 ---
 
 **Documentation**: [https://www.encode.io/orm](https://www.encode.io/orm)
@@ -70,7 +68,7 @@ class Note(orm.Model):
     }
 
 # Create the tables
-models.create_all()
+await models.create_all()
 
 await Note.objects.create(text="Buy the groceries.", completed=False)
 
