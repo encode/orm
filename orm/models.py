@@ -489,7 +489,9 @@ class QuerySet:
         ]
         expr = (
             self.table.update()
-            .where(self.table.c.id == sqlalchemy.bindparam(self.pkname))
+            .where(
+                getattr(self.table.c, self.pkname) == sqlalchemy.bindparam(self.pkname)
+            )
             .values(
                 {
                     field: sqlalchemy.bindparam(field)
@@ -498,7 +500,7 @@ class QuerySet:
                 }
             )
         )
-        pk_list = [{self.pkname: obj.pk} for obj in objs]
+        pk_list = [{self.pkname: getattr(obj, self.pkname)} for obj in objs]
         joined_list = [{**pk, **value} for pk, value in zip(pk_list, new_objs)]
         await self.database.execute_many(str(expr), joined_list)
 
