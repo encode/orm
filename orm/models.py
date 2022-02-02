@@ -22,8 +22,6 @@ FILTER_OPERATORS = {
     "lte": "__le__",
 }
 
-MODEL = typing.TypeVar("MODEL", bound="Model")
-
 
 def _update_auto_now_fields(values, fields):
     for key, value in fields.items():
@@ -468,7 +466,7 @@ class QuerySet:
         await self.database.execute(expr)
 
     async def bulk_update(
-        self, objs: typing.List[MODEL], fields: typing.List[str]
+        self, objs: typing.List["Model"], fields: typing.List[str]
     ) -> None:
         fields = {
             key: field.validator
@@ -477,29 +475,25 @@ class QuerySet:
         }
         validator = typesystem.Schema(fields=fields)
         new_objs = [
-            _update_auto_now_fields(validator.validate(value), self.model_cls.fields)
-            for value in [
-                {
-                    key: _convert_value(value)
-                    for key, value in obj.__dict__.items()
-                    if key in fields
-                }
-                for obj in objs
-            ]
+            {
+                key: _convert_value(value)
+                for key, value in obj.__dict__.items()
+                if key in fields
+            }
+            for obj in objs
         ]
-        expr = (
-            self.table.update()
-            .where(
-                getattr(self.table.c, self.pkname) == sqlalchemy.bindparam(self.pkname)
-            )
-            .values(
-                {
-                    field: sqlalchemy.bindparam(field)
-                    for obj in new_objs
-                    for field in obj.keys()
-                }
-            )
-        )
+        new_objs = [
+            _update_auto_now_fields(validator.validate(obj), self.model_cls.fields)
+            for obj in new_objs
+        ]
+        pk_column = getattr(self.table.c, self.pkname)
+        expr = self.table.update().where(pk_column == sqlalchemy.bindparam(self.pkname))
+        kwargs = {
+            field: sqlalchemy.bindparam(field)
+            for obj in new_objs
+            for field in obj.keys()
+        }
+        expr = expr.values(kwargs)
         pk_list = [{self.pkname: getattr(obj, self.pkname)} for obj in objs]
         joined_list = [{**pk, **value} for pk, value in zip(pk_list, new_objs)]
         await self.database.execute_many(str(expr), joined_list)
