@@ -37,8 +37,9 @@ class Book(orm.Model):
 
         async def get_or_none(self, **kwargs):
             try:
-                return suepr().get(**kwargs)
+                return await super().get(**kwargs)
             except NoMatch:
+                # or raise HttpException(404)
                 return None
 
     tablename = "products"
