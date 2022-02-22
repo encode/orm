@@ -83,7 +83,7 @@ class ModelMeta(type):
             if "tablename" not in attrs:
                 setattr(model_class, "tablename", name.lower())
 
-        attrs.setdefault("queryset_class", QuerySet)
+        model_class.queryset_class = attrs.get("queryset_class")
 
         for name, field in attrs.get("fields", {}).items():
             setattr(field, "registry", attrs.get("registry"))
@@ -500,7 +500,7 @@ class Model(metaclass=ModelMeta):
 
     @property
     def objects(self) -> QuerySet:
-        return cls.queryset_class()
+        return self.queryset_class() if self.queryset_class else QuerySet()
 
     @property
     def pk(self):
