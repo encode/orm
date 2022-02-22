@@ -83,11 +83,7 @@ class ModelMeta(type):
             if "tablename" not in attrs:
                 setattr(model_class, "tablename", name.lower())
 
-        if "queryset_class" in attrs:
-            if not isinstance(attrs["queryset_class"], QuerySet):
-                raise ValueError("queryset must extend QuerySet class.")
-        else:
-            attrs["queryset_class"] = None
+        attrs.setdefault("queryset_class", QuerySet)
 
         for name, field in attrs.get("fields", {}).items():
             setattr(field, "registry", attrs.get("registry"))
@@ -504,7 +500,7 @@ class Model(metaclass=ModelMeta):
 
     @property
     def objects(self) -> QuerySet:
-        return cls.queryset_class() if cls.queryset_class else QuerySet()
+        return cls.queryset_class()
 
     @property
     def pk(self):
