@@ -83,6 +83,12 @@ class ModelMeta(type):
             if "tablename" not in attrs:
                 setattr(model_class, "tablename", name.lower())
 
+        if "queryset_class" in attrs:
+            if not isinstance(attrs["queryset_class"], QuerySet):
+                raise ValueError("queryset must extend QuerySet class.")
+        else:
+            attrs["queryset_class"] = None
+
         for name, field in attrs.get("fields", {}).items():
             setattr(field, "registry", attrs.get("registry"))
             if field.primary_key:
@@ -485,7 +491,6 @@ class QuerySet:
 
 
 class Model(metaclass=ModelMeta):
-    objects = QuerySet()
 
     def __init__(self, **kwargs):
         if "pk" in kwargs:
@@ -496,6 +501,10 @@ class Model(metaclass=ModelMeta):
                     f"Invalid keyword {key} for class {self.__class__.__name__}"
                 )
             setattr(self, key, value)
+
+    @property
+    def objects(self) -> QuerySet:
+        return cls.queryset_class() if cls.queryset_class else QuerySet()
 
     @property
     def pk(self):

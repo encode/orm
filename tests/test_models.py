@@ -32,6 +32,24 @@ class Product(orm.Model):
     }
 
 
+class Book(orm.Model):
+    class MyQuerySet(QuerySet):
+
+        async def get_or_none(self, **kwargs):
+            try:
+                return suepr().get(**kwargs)
+            except NoMatch:
+                return None
+
+    tablename = "products"
+    registry = models
+    queryset_class = QuerySet
+    fields = {
+        "id": orm.Integer(primary_key=True),
+        "name": orm.String(max_length=100),
+    }
+
+
 @pytest.fixture(autouse=True, scope="function")
 async def create_test_database():
     await models.create_all()
@@ -333,3 +351,13 @@ async def test_model_sqlalchemy_filter_operators():
         shirt
         == await Product.objects.filter(Product.columns.name.contains("Cotton")).get()
     )
+
+
+async def test_queryset_class():
+    await Book.objects.create(name="book")
+
+    b = await Book.objects.get_or_none(name="book")
+    assert b
+
+    b = await Book.objects.get_or_none(name="books")
+    assert b is None

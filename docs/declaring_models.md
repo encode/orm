@@ -18,8 +18,13 @@ models = orm.ModelRegistry(database=database)
 
 
 class Note(orm.Model):
+    class MyQuerySet(QuerySet):
+        ...
+    
     tablename = "notes"
     registry = models
+    # or do not define the queryset_class
+    queryset_class = MyQuerySet
     fields = {
         "id": orm.Integer(primary_key=True),
         "text": orm.String(max_length=100),
