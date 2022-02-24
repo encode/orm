@@ -238,7 +238,7 @@ await note.update(completed=True)
 ### .get_or_create()
 
 To get an existing instance matching the query, or create a new one.
-This will retuurn a tuple of `instance` and `created`.
+This will return a tuple of `instance` and `created`.
 
 ```python
 note, created = await Note.objects.get_or_create(
@@ -256,7 +256,7 @@ if it doesn't exist, it will use `defaults` argument to create the new instance.
 ### .update_or_create()
 
 To update an existing instance matching the query, or create a new one.
-This will retuurn a tuple of `instance` and `created`.
+This will return a tuple of `instance` and `created`.
 
 ```python
 note, created = await Note.objects.update_or_create(
