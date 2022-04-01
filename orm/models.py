@@ -489,6 +489,7 @@ class QuerySet:
 
 class Model(metaclass=ModelMeta):
     objects = QuerySet()
+    unique_together: typing.Sequence[typing.Union[typing.Sequence[str], str]]
 
     def __init__(self, **kwargs):
         if "pk" in kwargs:
@@ -518,10 +519,22 @@ class Model(metaclass=ModelMeta):
     def build_table(cls):
         tablename = cls.tablename
         metadata = cls.registry._metadata
+        unique_together = cls.unique_together
+
         columns = []
         for name, field in cls.fields.items():
             columns.append(field.get_column(name))
-        return sqlalchemy.Table(tablename, metadata, *columns, extend_existing=True)
+
+        uniques = []
+        for fields_set in unique_together:
+            if isinstance(fields_set, str):
+                uniques.append(sqlalchemy.UniqueConstraint(fields_set))
+            elif isinstance(fields_set, (tuple, list)):
+                uniques.append(sqlalchemy.UniqueConstraint(*fields_set))
+
+        return sqlalchemy.Table(
+            tablename, metadata, *columns, *uniques, extend_existing=True
+        )
 
     @property
     def table(self) -> sqlalchemy.Table:
