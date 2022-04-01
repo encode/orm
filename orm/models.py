@@ -88,6 +88,9 @@ class ModelMeta(type):
             if field.primary_key:
                 model_class.pkname = name
 
+        unique_together = attrs.get("unique_together", ())
+        setattr(model_class, "unique_together", unique_together)
+
         return model_class
 
     @property
