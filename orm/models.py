@@ -527,10 +527,9 @@ class Model(metaclass=ModelMeta):
 
         uniques = []
         for fields_set in unique_together:
-            if isinstance(fields_set, str):
-                uniques.append(sqlalchemy.UniqueConstraint(fields_set))
-            elif isinstance(fields_set, (tuple, list)):
-                uniques.append(sqlalchemy.UniqueConstraint(*fields_set))
+            unique_constraint = cls.__get_unique_constraint(fields_set)
+            if unique_constraint is not None:
+                uniques.append(unique_constraint)
 
         return sqlalchemy.Table(
             tablename, metadata, *columns, *uniques, extend_existing=True
@@ -595,6 +594,24 @@ class Model(metaclass=ModelMeta):
                 item[column.name] = row[column]
 
         return cls(**item)
+
+    @classmethod
+    def __get_unique_constraint(
+        cls,
+        columns: typing.Union[typing.Sequence[str], str],
+    ) -> typing.Optional[sqlalchemy.UniqueConstraint]:
+        """
+        Returned the Unique Constraint of SQLAlchemy.
+
+        :columns: Must be `str` or `Sequence[List or Tupe]` of Strings
+
+        If Type of 'columns' Didn't Match Above Nothing to Return Output
+        """
+
+        if isinstance(columns, str):
+            return sqlalchemy.UniqueConstraint(columns)
+        elif isinstance(columns, (tuple, list)):
+            return sqlalchemy.UniqueConstraint(*columns)
 
     def __setattr__(self, key, value):
         if key in self.fields:
