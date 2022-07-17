@@ -17,6 +17,6 @@ pytest
 pytest-cov
 
 # Documentation
-mkdocs
-mkdocs-material
-mkautodoc
+mkdocs==1.3.0
+mkdocs-material==8.3.9
+mkautodoc==0.1.0
