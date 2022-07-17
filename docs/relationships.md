@@ -72,7 +72,7 @@ track = await Track.objects.select_related("album").get(title="The Bird")
 assert track.album.name == "Malibu"
 ```
 
-To fetch an instance, filtering across a foregin key relationship:
+To fetch an instance, filtering across a foreign key relationship:
 
 ```python
 tracks = Track.objects.filter(album__name="Fantasies")
@@ -84,7 +84,7 @@ assert len(tracks) == 2
 
 ### ForeignKey constraints
 
-`ForeigknKey` supports specfiying a constraint through `on_delete` argument.
+`ForeigknKey` supports specifying a constraint through `on_delete` argument.
 
 This will result in a SQL `ON DELETE` query being generated when the referenced object is removed.
 
