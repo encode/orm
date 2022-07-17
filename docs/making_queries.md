@@ -19,7 +19,7 @@ class Note(orm.Model):
 ```
 
 ORM supports two types of queryset methods.
-Some queryset methods return another queryset and can be chianed together like `.filter()` and `order_by`:
+Some queryset methods return another queryset and can be chained together like `.filter()` and `order_by`:
 
 ```python
 Note.objects.filter(completed=True).order_by("id")
@@ -266,7 +266,7 @@ note, created = await Note.objects.update_or_create(
 
 This will query a `Note` with `text` as `"Going to car wash"`,
 if an instance is found, it will use the `defaults` argument to update the instance.
-If it matches no records, it will use the comibnation of arguments to create the new instance.
+If it matches no records, it will use the combination of arguments to create the new instance.
 
 !!! note
     Since `update_or_create()` is doing a [get()](#get), it can raise `MultipleMatches` exception.
