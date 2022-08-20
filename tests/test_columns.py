@@ -131,6 +131,12 @@ async def test_model_crud():
     assert product.updated_date == last_updated_date
 
 
+async def test_create_user_with_custom_uuid():
+    custom_uuid = uuid.uuid4()
+    user = await User.objects.create(id=custom_uuid)
+    assert user.pk == custom_uuid
+
+
 async def test_both_auto_now_and_auto_now_add_raise_error():
     with pytest.raises(ValueError):
 
@@ -159,3 +165,13 @@ async def test_bulk_create():
     assert products[1].data == {"foo": 456}
     assert products[1].value == 456.789
     assert products[1].status == StatusEnum.DRAFT
+
+
+async def test_create_with_pk_not_integer_and_without_default_value():
+    with pytest.raises(ValueError):
+
+        class Post(orm.Model):
+            registry = models
+            fields = {
+                "id": orm.UUID(primary_key=True)
+            }

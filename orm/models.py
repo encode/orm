@@ -410,14 +410,14 @@ class QuerySet:
         for key, value in fields.items():
             if value.validator.read_only and value.validator.has_default():
                 kwargs[key] = value.validator.get_default_value()
-        return kwargs
+
+        return {key: value for key, value in kwargs.items() if value is not None}
 
     async def create(self, **kwargs):
         kwargs = self._validate_kwargs(**kwargs)
         instance = self.model_cls(**kwargs)
         expr = self.table.insert().values(**kwargs)
-
-        if self.pkname not in kwargs:
+        if not self.pkname in kwargs:
             instance.pk = await self.database.execute(expr)
         else:
             await self.database.execute(expr)

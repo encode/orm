@@ -16,12 +16,21 @@ class ModelField:
         **kwargs: typing.Any,
     ) -> None:
         if primary_key:
-            kwargs["read_only"] = True
+            default_value = kwargs.get("default", None)
+            self.raise_if_pk_without_default(default_value)
+            kwargs['allow_null'] = True
+
         self.allow_null = kwargs.get("allow_null", False)
         self.primary_key = primary_key
         self.index = index
         self.unique = unique
         self.validator = self.get_validator(**kwargs)
+
+    def raise_if_pk_without_default(self, default: typing.Any):
+        if not default:
+            raise ValueError(
+                f"You need to specify default value for {self.__class__.__name__} primary key field"
+            )
 
     def get_column(self, name: str) -> sqlalchemy.Column:
         column_type = self.get_column_type()
@@ -70,6 +79,9 @@ class Text(ModelField):
 
 
 class Integer(ModelField):
+    def raise_if_pk_without_default(self, default: typing.Any):
+        pass
+
     def get_validator(self, **kwargs) -> typesystem.Field:
         return typesystem.Integer(**kwargs)
 
