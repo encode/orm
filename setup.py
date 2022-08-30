@@ -50,7 +50,6 @@ setup(
     author_email="tom@tomchristie.com",
     packages=get_packages(PACKAGE),
     package_data={PACKAGE: ["py.typed"]},
-    data_files=[("", ["LICENSE.md"])],
     install_requires=["databases~=0.5", "typesystem==0.3.1"],
     extras_require={
         "postgresql": ["asyncpg"],
@@ -69,5 +68,7 @@ setup(
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3 :: Only",
     ],
 )
