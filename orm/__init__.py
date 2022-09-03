@@ -20,7 +20,7 @@ from orm.fields import (
     Text,
     Time,
 )
-from orm.models import Model, ModelRegistry
+from orm.models import Model, ModelRegistry, QuerySet
 
 __version__ = "0.3.1"
 __all__ = [
@@ -49,4 +49,5 @@ __all__ = [
     "UUID",
     "Model",
     "ModelRegistry",
+    "QuerySet"
 ]
