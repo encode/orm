@@ -159,3 +159,43 @@ async def test_bulk_create():
     assert products[1].data == {"foo": 456}
     assert products[1].value == 456.789
     assert products[1].status == StatusEnum.DRAFT
+
+
+async def test_bulk_update():
+    await Product.objects.bulk_create(
+        [
+            {
+                "created_day": datetime.date.today(),
+                "data": {"foo": 123},
+                "value": 123.456,
+                "status": StatusEnum.RELEASED,
+            },
+            {
+                "created_day": datetime.date.today(),
+                "data": {"foo": 456},
+                "value": 456.789,
+                "status": StatusEnum.DRAFT,
+            },
+        ]
+    )
+    products = await Product.objects.all()
+    products[0].created_day = datetime.date.today() - datetime.timedelta(days=1)
+    products[1].created_day = datetime.date.today() - datetime.timedelta(days=1)
+    products[0].status = StatusEnum.DRAFT
+    products[1].status = StatusEnum.RELEASED
+    products[0].data = {"foo": 1234}
+    products[1].data = {"foo": 5678}
+    products[0].value = 345.5
+    products[1].value = 789.8
+    await Product.objects.bulk_update(
+        products, fields=["created_day", "status", "data", "value"]
+    )
+    products = await Product.objects.all()
+    assert products[0].created_day == datetime.date.today() - datetime.timedelta(days=1)
+    assert products[1].created_day == datetime.date.today() - datetime.timedelta(days=1)
+    assert products[0].status == StatusEnum.DRAFT
+    assert products[1].status == StatusEnum.RELEASED
+    assert products[0].data == {"foo": 1234}
+    assert products[1].data == {"foo": 5678}
+    assert products[0].value == 345.5
+    assert products[1].value == 789.8

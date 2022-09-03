@@ -1,3 +1,5 @@
+import enum
+import json
 import typing
 
 import databases
@@ -26,6 +28,15 @@ def _update_auto_now_fields(values, fields):
         if isinstance(value, (DateTime, Date)) and value.auto_now:
             values[key] = value.validator.get_default_value()
     return values
+
+
+def _convert_value(value):
+    if isinstance(value, dict):
+        return json.dumps(value)
+    elif isinstance(value, enum.Enum):
+        return value.name
+    else:
+        return value
 
 
 class ModelRegistry:
@@ -453,6 +464,39 @@ class QuerySet:
             expr = expr.where(filter_clause)
 
         await self.database.execute(expr)
+
+    async def bulk_update(
+        self, objs: typing.List["Model"], fields: typing.List[str]
+    ) -> None:
+        fields = {
+            key: field.validator
+            for key, field in self.model_cls.fields.items()
+            if key in fields
+        }
+        validator = typesystem.Schema(fields=fields)
+        new_objs = [
+            {
+                key: _convert_value(value)
+                for key, value in obj.__dict__.items()
+                if key in fields
+            }
+            for obj in objs
+        ]
+        new_objs = [
+            _update_auto_now_fields(validator.validate(obj), self.model_cls.fields)
+            for obj in new_objs
+        ]
+        pk_column = getattr(self.table.c, self.pkname)
+        expr = self.table.update().where(pk_column == sqlalchemy.bindparam(self.pkname))
+        kwargs = {
+            field: sqlalchemy.bindparam(field)
+            for obj in new_objs
+            for field in obj.keys()
+        }
+        expr = expr.values(kwargs)
+        pk_list = [{self.pkname: getattr(obj, self.pkname)} for obj in objs]
+        joined_list = [{**pk, **value} for pk, value in zip(pk_list, new_objs)]
+        await self.database.execute_many(str(expr), joined_list)
 
     async def get_or_create(
         self, defaults: typing.Dict[str, typing.Any], **kwargs

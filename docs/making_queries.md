@@ -146,10 +146,10 @@ await Note.objects.create(text="Send invoices.", completed=True)
 You need to pass a list of dictionaries of required fields to create multiple objects:
 
 ```python
-await Product.objects.bulk_create(
+await Note.objects.bulk_create(
     [
-        {"data": {"foo": 123}, "value": 123.456, "status": StatusEnum.RELEASED},
-        {"data": {"foo": 456}, "value": 456.789, "status": StatusEnum.DRAFT},
+        {"text": "Buy the groceries", "completed": False},
+        {"text": "Call Mum.", "completed": True},
 
     ]
 )
@@ -233,6 +233,18 @@ note = await Note.objects.first()
 await note.update(completed=True)
 ```
 
+### .bulk_update()
+
+You can also bulk update multiple objects at once by passing a list of objects and a list of fields to update.
+
+```python
+notes = await Note.objects.all()
+for note in notes :
+    note.completed = True
+
+await Note.objects.bulk_update(notes, fields=["completed"])
+```
+
 ## Convenience Methods
 
 ### .get_or_create()
@@ -251,7 +263,6 @@ if it doesn't exist, it will use `defaults` argument to create the new instance.
 
 !!! note
     Since `get_or_create()` is doing a [get()](#get), it can raise `MultipleMatches` exception.
-
 
 ### .update_or_create()
 
