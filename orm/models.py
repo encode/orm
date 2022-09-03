@@ -88,6 +88,9 @@ class ModelMeta(type):
             if field.primary_key:
                 model_class.pkname = name
 
+        unique_together = attrs.get("unique_together", ())
+        setattr(model_class, "unique_together", unique_together)
+
         return model_class
 
     @property
@@ -486,6 +489,7 @@ class QuerySet:
 
 class Model(metaclass=ModelMeta):
     objects = QuerySet()
+    unique_together: typing.Sequence[typing.Union[typing.Sequence[str], str]]
 
     def __init__(self, **kwargs):
         if "pk" in kwargs:
@@ -515,10 +519,21 @@ class Model(metaclass=ModelMeta):
     def build_table(cls):
         tablename = cls.tablename
         metadata = cls.registry._metadata
+        unique_together = cls.unique_together
+
         columns = []
         for name, field in cls.fields.items():
             columns.append(field.get_column(name))
-        return sqlalchemy.Table(tablename, metadata, *columns, extend_existing=True)
+
+        uniques = []
+        for fields_set in unique_together:
+            unique_constraint = cls.__get_unique_constraint(fields_set)
+            if unique_constraint is not None:
+                uniques.append(unique_constraint)
+
+        return sqlalchemy.Table(
+            tablename, metadata, *columns, *uniques, extend_existing=True
+        )
 
     @property
     def table(self) -> sqlalchemy.Table:
@@ -579,6 +594,24 @@ class Model(metaclass=ModelMeta):
                 item[column.name] = row[column]
 
         return cls(**item)
+
+    @classmethod
+    def __get_unique_constraint(
+        cls,
+        columns: typing.Union[typing.Sequence[str], str],
+    ) -> typing.Optional[sqlalchemy.UniqueConstraint]:
+        """
+        Returned the Unique Constraint of SQLAlchemy.
+
+        :columns: Must be `str` or `Sequence[List or Tupe]` of Strings
+
+        If Type of 'columns' Didn't Match Above Nothing to Return Output
+        """
+
+        if isinstance(columns, str):
+            return sqlalchemy.UniqueConstraint(columns)
+        elif isinstance(columns, (tuple, list)):
+            return sqlalchemy.UniqueConstraint(*columns)
 
     def __setattr__(self, key, value):
         if key in self.fields:

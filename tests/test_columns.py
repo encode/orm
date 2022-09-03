@@ -57,6 +57,16 @@ class User(orm.Model):
     }
 
 
+class Customer(orm.Model):
+    registry = models
+    fields = {
+        "id": orm.Integer(primary_key=True),
+        "fname": orm.String(max_length=100),
+        "lname": orm.String(max_length=100),
+    }
+    unique_together = (("fname", "lname"),)
+
+
 @pytest.fixture(autouse=True, scope="module")
 async def create_test_database():
     await models.create_all()
@@ -159,3 +169,22 @@ async def test_bulk_create():
     assert products[1].data == {"foo": 456}
     assert products[1].value == 456.789
     assert products[1].status == StatusEnum.DRAFT
+
+
+async def test_unique_together_fname_lname():
+    sepehr = await Customer.objects.create(fname="Sepehr", lname="Bazyar")
+    sepehr: Customer = await Customer.objects.get(pk=sepehr.pk)
+
+    farzane = await Customer.objects.create(fname="Farzane", lname="Bazyar")
+    farzane: Customer = await Customer.objects.get(pk=farzane.pk)
+
+    assert sepehr.lname == farzane.lname
+    assert sepehr.fname == "Sepehr"
+    assert farzane.fname == "Farzane"
+
+
+async def test_unique_together_fname_lname_raise_error():
+    with pytest.raises(Exception):
+
+        await Customer.objects.create(fname="Sepehr", lname="Bazyar")
+        await Customer.objects.create(fname="Sepehr", lname="Bazyar")
